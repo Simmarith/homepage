@@ -16,7 +16,7 @@ export default {
   name: 'Home',
   components: {
   },
-};
+}
 </script>
 
 <style lang="less" scoped>

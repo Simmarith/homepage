@@ -9,8 +9,20 @@
       </router-link>
     </div>
     <router-view />
+    <Socials />
   </div>
 </template>
+
+<script>
+import Socials from './components/Socials.vue'
+
+export default {
+  name: 'App',
+  components: {
+    Socials
+  }
+}
+</script>
 
 <style lang="less">
 body {

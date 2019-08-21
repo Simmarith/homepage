@@ -26,6 +26,11 @@
       link="https://github.com/munichmakerlab/vim-clutch"
       desc="Using a foot pedal to switch in/out of insert mode in vim"
     />
+    <Project
+      title="Dancing Letter Conversion"
+      link="https://dl.simmarith.com"
+      desc="Easily converts normal text into some specific emojis"
+    />
   </div>
 </template>
 

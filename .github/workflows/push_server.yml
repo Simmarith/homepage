@@ -29,3 +29,4 @@ jobs:
           cd /home/nginx/homepage
           git pull --force
           npm i
+          npm run build

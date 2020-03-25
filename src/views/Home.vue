@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <img
-      alt="Vue logo"
+      alt="Logo"
       src="../assets/logo.png"
     >
     <h1>Simmarith’s might-eventually-actually-happen website</h1>
@@ -20,7 +20,14 @@ export default {
 </script>
 
 <style lang="less" scoped>
+.home {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+}
 img {
-  width: 700px;
+  height: 70vh;
+  max-height: 90vw;
+  width: auto;
 }
 </style>

@@ -50,5 +50,7 @@ export default {
   .desc{
     display: inline-block;
     padding-bottom: 20px;
+    padding-right: 2vw;
+    padding-left: 2vw;
   }
 </style>

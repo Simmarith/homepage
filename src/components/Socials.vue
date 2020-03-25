@@ -32,7 +32,7 @@ export default {
   flex-direction: column;
   position: absolute;
   top: 10vh;
-  right: 0px;
+  right: 1vw;
   padding-right: 10px;
 }
 </style>

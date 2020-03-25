@@ -4,8 +4,10 @@
       alt="Logo"
       src="../assets/logo.png"
     >
-    <h1>Simmarith’s might-eventually-actually-happen website</h1>
-    <h3>See nav on top of the page for more content</h3>
+    <div class="text">
+      <h1>Simmarith’s might-eventually-actually-happen website</h1>
+      <h3>See nav on top of the page for more content</h3>
+    </div>
   </div>
 </template>
 
@@ -26,7 +28,7 @@ export default {
   position: absolute;
 }
 
-h1 {
+.text {
   padding: 0px 3vw;
 }
 

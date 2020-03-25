@@ -25,6 +25,11 @@ export default {
   height: 100%;
   position: absolute;
 }
+
+h1 {
+  padding: 0px 3vw;
+}
+
 img {
   height: 70vh;
   max-height: 90vw;

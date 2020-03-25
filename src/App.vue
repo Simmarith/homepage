@@ -27,6 +27,7 @@ export default {
 <style lang="less">
 body {
   background-color: #eaeaea;
+  margin: 0px;
 }
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;

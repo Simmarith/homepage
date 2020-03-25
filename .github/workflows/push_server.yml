@@ -21,10 +21,11 @@ jobs:
     steps:
     - name: Install on server
       uses: appleboy/ssh-action@v0.0.2
-      host: ${{ secrets.webserver }}
-      username: ${{ secrets.user }}
-      password: ${{ secrets.password }}
-      script: |
-        cd /home/nginx/homepage
-        git pull --force
-        npm i
+      with:
+        host: ${{ secrets.webserver }}
+        username: ${{ secrets.user }}
+        password: ${{ secrets.password }}
+        script: |
+          cd /home/nginx/homepage
+          git pull --force
+          npm i

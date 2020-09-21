@@ -2,6 +2,11 @@
   <div class="projects">
     <h1>Some Projects I did:</h1>
     <Project
+      title="NumGrid"
+      link="https://simmarith.itch.io/numgrid"
+      desc="I've built a small puzzle game on a quiet weekend."
+    />
+    <Project
       title="Handsoldered Dactyl-Manuform"
       link="https://wiki.munichmakerlab.de/wiki/Dactyl-Manuform"
       desc="I've built my own keyboard off of templates from the internet."

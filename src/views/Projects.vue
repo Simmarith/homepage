@@ -7,6 +7,11 @@
       desc="I've built a small puzzle game on a quiet weekend."
     />
     <Project
+      title="CAG Website"
+      link="https://cag-gang.com"
+      desc="A quick website for a totally-not-a-cult refined religion"
+    />
+    <Project
       title="Handsoldered Dactyl-Manuform"
       link="https://wiki.munichmakerlab.de/wiki/Dactyl-Manuform"
       desc="I've built my own keyboard off of templates from the internet."

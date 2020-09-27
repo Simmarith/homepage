@@ -1,0 +1,42 @@
+module.exports = {
+  root: true,
+  env: {
+    node: true,
+  },
+  extends: [
+    'plugin:vue/vue3-essential',
+    '@vue/airbnb',
+  ],
+  parserOptions: {
+    parser: 'babel-eslint',
+  },
+  rules: {
+    'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
+    'space-before-function-paren': 'off',
+    'linebreak-style': 'off',
+    'global-require': 'off',
+    'semi': 'off',
+    'arrow-body-style': 'off',
+    'no-useless-constructor': 'off',
+    'comma-dangle': 'off',
+    'no-unused-vars': 'warn',
+    'spaced-comment': 'warn',
+    'no-trailing-spaces': 'off',
+    'max-len': [ 2, 120, 4 ],
+    'prefer-template': 'warn',
+    'arrow-parens': 'off',
+    'keyword-spacing': 'off',
+    'class-methods-use-this': 'off',
+    'no-return-assign': 'off',
+    'no-param-reassign': 'off',
+    'no-else-return': 'off',
+    'no-console': ['warn', { 'allow': ['warn', 'error'] }],
+    'no-plusplus': 'off',
+    'no-restricted-syntax': ['error', 'WithStatement'],
+    'no-multi-spaces': ['error', { 'ignoreEOLComments': true }],
+    'prefer-destructuring': 'off',
+    'operator-linebreak': ['error', 'after', { 'overrides': { '||': 'before', '&&': 'before' } }],
+    'object-curly-newline': ['error', { 'consistent': true }],
+    'import/no-named-as-default-member': 'off'
+  },
+};

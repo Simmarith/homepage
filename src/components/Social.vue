@@ -1,5 +1,5 @@
 <template>
-  <a :href="link">
+  <a class="social" :href="link">
     <slot />
   </a>
 </template>
@@ -16,8 +16,8 @@ export default {
 }
 </script>
 
-<style lang="less" scoped>
-a {
+<style lang="less">
+.social {
   img {
     width: 60px;
     height: 60px;

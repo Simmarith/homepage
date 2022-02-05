@@ -3,31 +3,29 @@
     <div id="nav">
       <router-link to="/">
         Home
-      </router-link> |
-      <router-link to="/projects">
-        Projects
       </router-link>
     </div>
     <router-view />
-    <Socials />
   </div>
 </template>
 
 <script>
-import Socials from './components/Socials.vue'
-
 export default {
-  name: 'App',
-  components: {
-    Socials
-  }
+  name: 'App'
 }
 </script>
 
 <style lang="less">
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background-color: #eaeaea;
+  background-color: var(--background-color);
   margin: 0px;
+  --text-color: #eee;
+  --background-color: #222;
+  --background-color-light: #444;
 }
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
@@ -35,7 +33,7 @@ body {
   font-size: 15px;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
+  color: var(--text-color);
 }
 #nav {
   padding: 2vh;
@@ -45,9 +43,9 @@ body {
 
   a {
     font-weight: bold;
-    color: #2c3e50;
+    color: #aaa;
     &.router-link-exact-active {
-      color: #42b983;
+      color: #eee;
     }
   }
 }

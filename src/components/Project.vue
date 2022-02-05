@@ -2,7 +2,9 @@
   <a
     class="container"
     :href="link"
+    :style="`grid-row-end:span ${rows};`"
   >
+    <img :src="require(`@/assets/${imageName}`)" alt="">
     <h3>{{ title }}</h3>
     <span class="desc">{{ desc }}</span>
   </a>
@@ -23,6 +25,14 @@ export default {
     desc: {
       type: String,
       default: ''
+    },
+    imageName: {
+      type: String,
+      default: 'logo.png'
+    },
+    rows: {
+      type: Number,
+      default: 50
     }
   }
 }
@@ -34,12 +44,11 @@ export default {
   a:active {
     display: inline-block;
     border-radius: 2px;
-    color: #2c3e50;
+    color: var(--text-color);
     text-decoration: none;
     margin: 10px;
-    width: 60vw;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-    background-color: #fff;
+    background-color: var(--background-color-light);
     transition: all 0.3s cubic-bezier(.25,.8,.25,1);
   }
 
@@ -52,5 +61,9 @@ export default {
     padding-bottom: 20px;
     padding-right: 2vw;
     padding-left: 2vw;
+  }
+
+  img {
+    max-width: 40vw;
   }
 </style>

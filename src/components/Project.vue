@@ -1,8 +1,7 @@
 <template>
   <a
-    class="container"
+    :class="imageSpaced ? 'container project spaced' : 'container project'"
     :href="link"
-    :style="`grid-row-end:span ${rows};`"
   >
     <img :src="require(`@/assets/${imageName}`)" alt="">
     <h3>{{ title }}</h3>
@@ -30,9 +29,9 @@ export default {
       type: String,
       default: 'logo.png'
     },
-    rows: {
-      type: Number,
-      default: 50
+    imageSpaced: {
+      type: Boolean,
+      default: false
     }
   }
 }
@@ -42,14 +41,17 @@ export default {
   a,
   a:hover,
   a:active {
-    display: inline-block;
+    display: block;
     border-radius: 2px;
     color: var(--text-color);
     text-decoration: none;
-    margin: 10px;
+    margin-bottom: 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
     background-color: var(--background-color-light);
     transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+    width: 35vw;
+    min-width: 200px;
+    max-width: 500px;
   }
 
   a:hover {
@@ -64,6 +66,13 @@ export default {
   }
 
   img {
-    max-width: 40vw;
+    width: 100%;
+    max-width: 500px;
+    min-width: 160px;
+  }
+
+  .spaced img {
+    width: calc(100% - 20px);
+    padding: 10px;
   }
 </style>

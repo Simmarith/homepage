@@ -6,7 +6,7 @@
       <div class="text">
         <h1>Simmarith’s past semi-completed projects</h1>
       </div>
-      <a href="#project-display" class="scroll">▼</a>
+      <a href="#project-display-wrapper" class="scroll">▼</a>
     </div>
     <ProjectDisplay />
   </div>

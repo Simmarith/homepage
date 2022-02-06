@@ -2,18 +2,18 @@
   <div id="project-display-wrapper">
     <h1>Projects I’ve worked on</h1>
     <div id="project-display">
-      <router-link to="/printing">
-        <div class="project">
+      <div class="project">
+        <router-link to="/printing">
           <video loop autoplay muted src="printing.mp4"></video>
           <span>3d Printing/Design</span>
-        </div>
-      </router-link>
-      <router-link to="/coding">
-        <div class="project">
+        </router-link>
+      </div>
+      <div class="project">
+        <router-link to="/coding">
           <video loop autoplay muted src="typing.mp4"></video>
           <span>Writing Code</span>
-        </div>
-      </router-link>
+        </router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -29,7 +29,7 @@ export default {
   background-color: var(--background-color);
   box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.72);
   min-height: 100vh;
-  
+
   h1 {
     grid-column: 1 / span 2;
     padding-top: 2em;
@@ -53,7 +53,6 @@ export default {
 
     video {
       max-width: 90%;
-      height: 50vh;
       filter: brightness(0.4);
       transition: filter 0.3s ease-out;
     }
@@ -65,6 +64,8 @@ export default {
       left: 0;
       width: 100%;
       z-index: 5;
+      text-decoration: none;
+      color: var(--text-color);
     }
   }
 }
@@ -77,6 +78,12 @@ export default {
     h1 {
       grid-column: 1;
     }
+  }
+}
+
+@media only screen and (min-width: 768px) {
+  #project-display video {
+    height: 50vh;
   }
 }
 </style>

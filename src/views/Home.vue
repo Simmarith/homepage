@@ -56,7 +56,7 @@ export default {
 }
 
 img {
-  height: 70vh;
+  height: calc(98vh - 12.5em);
   max-height: 90vw;
   width: auto;
   filter: invert(0.8);

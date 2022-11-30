@@ -1,0 +1,121 @@
+---
+export interface Props {
+  img?: string
+  title: string
+  body: string
+  href: string
+  left: number
+  top: number
+  skew: number
+  round?: boolean
+}
+
+const { img, href, title, body, top, left, skew, round } = Astro.props
+---
+
+<div
+  class={`link-card${round ? ' round' : ''}`}
+  style={`top: ${top}vh;left: ${left}vw; transform:rotate(${skew}deg);`}
+>
+  <a href={href}>
+    {img && <img src={img} />}
+    <div class='text-content'>
+      <h2>
+        {title}
+        <span>&rarr;</span>
+      </h2>
+      <p>
+        {body}
+      </p>
+    </div>
+  </a>
+</div>
+<style lang='less'>
+  .link-card {
+    list-style: none;
+    position: absolute;
+    display: flex;
+    background-color: var(--background-light);
+    border-radius: 0.5rem;
+    transition: all 0.3s;
+    animation: move-in 0.4s;
+
+    &.round {
+      border-radius: 1000px;
+    }
+
+    > a {
+      width: 100%;
+      text-decoration: none;
+      color: var(--text);
+
+      .text-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        line-height: 1.4;
+        transition: opacity 0.2s, top 0.6s;
+      }
+
+      img {
+        height: 20vw;
+        max-height: 200px;
+        border-radius: 0.5rem;
+        opacity: 0.3;
+        transition: opacity 0.3s;
+      }
+    }
+
+    &:is(:hover) {
+      transform: rotate(0deg) !important;
+      box-shadow: 0 0 50px #aaa;
+      background-color: #aaa;
+
+      > a {
+        img {
+          opacity: 1;
+        }
+
+        .text-content {
+          top: 110%;
+          opacity: 1;
+        }
+      }
+    }
+  }
+
+  @media only screen and (max-width: 768px) {
+    .link-card {
+      transform: rotate(0deg) !important;
+      position: static;
+      background-color: rgba(0, 0, 0, 0);
+      padding-bottom: 5rem;
+
+      > a {
+        img {
+          opacity: 1;
+          min-height: 200px;
+        }
+
+        .text-content {
+          position: static !important;
+          opacity: 1 !important;
+        }
+      }
+
+      &:is(:hover) {
+      box-shadow: none;
+      background-color: rgba(0, 0, 0, 0);
+    }
+    }
+  }
+
+  @keyframes move-in {
+    0% {
+      top: 0;
+      left: 0;
+      transform: rotate(0deg);
+    }
+  }
+</style>

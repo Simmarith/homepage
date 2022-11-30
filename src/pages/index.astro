@@ -1,0 +1,124 @@
+---
+import Layout from '../layouts/Layout.astro'
+import Card from '../components/Card.astro'
+import VimClutch from '../assets/vim-clutch.jpg'
+import Keyboard from '../assets/keyboard.jpeg'
+import CableHolder from '../assets/cable-holder.webp'
+import NumGrid from '../assets/numgrid-logo.png'
+import Aeropress from '../assets/aeropress_filter.webp'
+import VirtualBooking from '../assets/virtualbooking.png'
+import Uberhacker from '../assets/uberhacker.png'
+
+import Wheel from '../components/Wheel.astro'
+import Thingiverse from '../assets/thingiverse.png'
+import GitHub from '../assets/github.svg'
+---
+
+<Layout title="Adrian's Stuff.">
+  <main>
+    <h1>Adrian's Stuff</h1>
+    <span class="desktop-hint">Better on desktop!</span>
+    <Card
+      img={VimClutch}
+      href="https://github.com/munichmakerlab/vim-clutch"
+      title="Vim Clutch"
+      body="Using a foot pedal to switch in/out of insert mode in vim"
+      top={10}
+      left={70}
+      skew={20}
+    />
+    <Card
+      img={CableHolder}
+      href="https://www.printables.com/model/289090-prusa-mini-usb-cable-holder"
+      title="Prusa Mini Cable Holder"
+      body="A quick fix for a quick issue"
+      top={55}
+      left={5}
+      skew={-20}
+    />
+    <Card
+      img={Keyboard}
+      href="https://wiki.munichmakerlab.de/wiki/Dactyl-Manuform"
+      title="Handsoldered Dactyl-Manuform"
+      body="I've built my own keyboard off of templates from the internet."
+      top={20}
+      left={10}
+      skew={20}
+    />
+    <Card
+      img={NumGrid}
+      href="https://simmarith.itch.io/numgrid"
+      title="NumGrid"
+      body="I've built a small puzzle game on a quiet weekend."
+      top={60}
+      left={70}
+      skew={-30}
+    />
+    <Card
+      img={Aeropress}
+      href="https://www.printables.com/model/321945-aeropress-filter-travel-box"
+      title="Aeropress Filter Travel Box"
+      body="The ultimate companion to keep all your filters on the go!"
+      top={53}
+      left={85}
+      skew={18}
+    />
+    <Card
+      img={VirtualBooking}
+      href="https://github.com/mumahack/virtualBookingCom"
+      title="VirtualBooking.com"
+      body="Booking a vacation in VR"
+      top={60}
+      left={40}
+      skew={-5}
+    />
+    <Card
+      img={Uberhacker}
+      href="https://github.com/Simmarith/uberhacker"
+      title="Uberhacker"
+      body="A multiplayer hacking game with IT related minigames"
+      top={10}
+      left={45}
+      skew={10}
+      round
+    />
+  </main>
+</Layout>
+
+<style lang="less">
+  main {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+
+    h1 {
+      opacity: 0.2;
+      font-size: 10vw;
+    }
+
+    .desktop-hint {
+      padding-bottom: 5rem;
+    }
+  }
+  
+  @media only screen and (max-width: 768px) {
+    main {
+      display: grid;
+      text-align: center;
+
+      h1 {
+        opacity: 1;
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  @media only screen and (min-width: 769px) {
+    .desktop-hint {
+      display: none;
+    }
+  }
+</style>

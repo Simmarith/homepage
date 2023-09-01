@@ -19,9 +19,9 @@ import { Image } from 'astro:assets'
   style={`top: ${top}vh;left: ${left}vw; transform:rotate(${skew}deg);`}
 >
   <a href={href}>
-    {img && <Image src={img} alt={title} width={200} />}
+    {img && <Image src={img} alt={title} width={200} transition:name={title + "Image"} />}
     <div class='text-content'>
-      <h2>
+      <h2 transition:name={title+"header"}>
         {title}
         <span>&rarr;</span>
       </h2>

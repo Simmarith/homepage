@@ -9,12 +9,13 @@ import Aeropress from '../assets/aeropress_filter.webp'
 import VirtualBooking from '../assets/virtualbooking.png'
 import Uberhacker from '../assets/uberhacker.png'
 
-import Wheel from '../components/Wheel.astro'
 import Thingiverse from '../assets/thingiverse.png'
 import GitHub from '../assets/github.svg'
+import { ViewTransitions } from 'astro:transitions'
 ---
 
 <Layout title="Adrian's Stuff.">
+  <ViewTransitions />
   <main>
     <h1>Adrian's Stuff</h1>
     <span class="desktop-hint">Better on desktop!</span>
@@ -47,7 +48,7 @@ import GitHub from '../assets/github.svg'
     />
     <Card
       img={NumGrid}
-      href="https://simmarith.itch.io/numgrid"
+      href="/numgrid"
       title="NumGrid"
       body="I've built a small puzzle game on a quiet weekend."
       top={60}
@@ -56,7 +57,7 @@ import GitHub from '../assets/github.svg'
     />
     <Card
       img={Aeropress}
-      href="https://www.printables.com/model/321945-aeropress-filter-travel-box"
+      href="/aeropress_filter"
       title="Aeropress Filter Travel Box"
       body="The ultimate companion to keep all your filters on the go!"
       top={53}
@@ -74,7 +75,7 @@ import GitHub from '../assets/github.svg'
     />
     <Card
       img={Uberhacker}
-      href="https://github.com/Simmarith/uberhacker"
+      href="/uberhacker"
       title="Uberhacker"
       body="A multiplayer hacking game with IT related minigames"
       top={10}

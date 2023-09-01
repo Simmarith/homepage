@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro'
+import InfoPage from '../components/InfoPage.astro'
+import AeropressFilterImage from '../assets/aeropress_filter.webp'
+import { ViewTransitions } from 'astro:transitions'
+---
+
+<Layout title='Aeropress Filter'>
+  <main>
+    <ViewTransitions />
+    <InfoPage
+      title='Aeropress Filter Travel Box'
+      image={AeropressFilterImage}
+      link='https://www.printables.com/model/321945-aeropress-filter-travel-box'
+    >
+      <p>
+        This is possibly the simplest solution to traveling with your Aeropress
+        filters! An easy access hole on the bottom allows for the controlled
+        removal of as many paper filters as you need - down to the last one!
+      </p>
+      <p>
+        You can download this model from Printables by clicking onto "Go To Project".
+      </p>
+    </InfoPage>
+  </main>
+</Layout>

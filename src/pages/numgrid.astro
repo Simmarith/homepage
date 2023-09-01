@@ -1,0 +1,33 @@
+---
+import Layout from '../layouts/Layout.astro'
+import InfoPage from '../components/InfoPage.astro'
+import NumGridImage from '../assets/numgrid-logo.png'
+import { ViewTransitions } from 'astro:transitions'
+---
+
+<Layout title='NumGrid'>
+  <main>
+    <ViewTransitions />
+    <InfoPage
+      title='NumGrid'
+      image={NumGridImage}
+      link='https://simmarith.itch.io/numgrid'
+    >
+      <p>
+        It's just a small puzzle game that I've whipped up on a weekend. You'll
+        have to match the numbers up to others with the same value or with a
+        value that will add up to 10. Further instructions are available through
+        the help button.
+      </p>
+      <p>
+        Play as long as you want. As soon as you're happy with your score you
+        can post a screenshot of your score page anywhere you want.
+      </p>
+      <p>
+        This game does not save your progress! As soon as you close it you're
+        done. This also means that you can simply restart by restarting the
+        game.
+      </p>
+    </InfoPage>
+  </main>
+</Layout>

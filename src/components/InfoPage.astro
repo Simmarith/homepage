@@ -1,0 +1,76 @@
+---
+import { Image } from 'astro:assets'
+
+export interface Props {
+  title: string
+  image: ImageMetadata
+  link: string
+}
+
+const { title, image, link } = Astro.props
+---
+
+<div class='container'>
+  <a href="/" class="back">⮜</a>
+    <Image
+    src={image}
+    alt={title}
+    width={200}
+    transition:name={title + 'Image'}
+  />
+  <div class='text'>
+    <h1 transition:name={title + 'header'}>{title}</h1>
+    <slot />
+  </div>
+  <a class='project-link' href={link}>Go to Project</a>
+</div>
+
+<style lang='less'>
+  .container {
+    display: flex;
+    gap: 1rem;
+    margin: 2rem;
+    padding: 1rem 2rem;
+    border: 2px solid var(--background-light);
+    border-radius: 1rem;
+    height: calc(100vh - 4rem);
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.5);
+
+    .back {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 2rem;
+    }
+
+    .project-link {
+      align-self: flex-end;
+      padding: 1rem;
+      border-radius: 1rem;
+      width: 20rem;
+      text-align: center;
+
+      text-decoration: none;
+      color: var(--text);
+      background-color: var(--background-light);
+      transition: 0.1s all ease-out;
+
+      &:hover {
+        box-shadow: 0 0 50px #aaa;
+        background-color: #aaa;
+        color: #000;
+      }
+    }
+  }
+
+    
+  @media only screen and (max-width: 768px) {
+    .container {
+        flex-direction: column;
+
+        .project-link {
+            width: calc(100% - 2rem);
+        }
+    }
+  }
+</style>

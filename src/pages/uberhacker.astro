@@ -1,0 +1,37 @@
+---
+import Layout from '../layouts/Layout.astro'
+import InfoPage from '../components/InfoPage.astro'
+import UberhackerImage from '../assets/uberhacker.png'
+import { ViewTransitions } from 'astro:transitions'
+---
+
+<Layout title='Uberhacker'>
+  <main>
+    <ViewTransitions />
+    <InfoPage
+      title='Uberhacker'
+      image={UberhackerImage}
+      link='https://github.com/Simmarith/uberhacker'
+    >
+      <p>
+        You've seen just about any iteration of hacking in TV, Video Games or
+        Movies where some guy just smashes his keyboard to make the fanciest
+        graphics appear. After a few seconds of doing so they usually shout
+        something like "I'M IN" or "They have 4 firewalls I need to get through!
+        I don't know if I'll be able to make it in time!"
+      </p>
+      <p
+        >I wanted to make something that looks as nice as that but is a little
+        closer to what people in the IT sector actually do. And I also wanted to
+        press it into a game format! That is what Uberhacker is for.
+      </p>
+
+      <p>
+        In the finished product you will be able to join a game with your
+        friends and try to complete some simple tasks like extracting a network
+        address from a CIDR the fastest to gain some points. The visuals should
+        support the feeling of being an elite hacker just like in the movies.
+      </p>
+    </InfoPage>
+  </main>
+</Layout>

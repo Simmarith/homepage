@@ -1,43 +1,75 @@
 ---
 export interface Props {
-	title: string;
+  title: string
 }
 
-const { title } = Astro.props;
+const { title } = Astro.props
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/png" href="/favicon-32x32.png" />
-		<meta name="generator" content={Astro.generator} />
-		<title>{title}</title>
-	</head>
-	<body>
-		<slot />
-	</body>
+<!doctype html>
+<html lang='en'>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width' />
+    <link rel='icon' type='image/png' href='/favicon-32x32.png' />
+    <meta name='generator' content={Astro.generator} />
+    <link rel='apple-touch-icon' sizes='180x180' href='/apple-touch-icon.png' />
+    <link rel='icon' type='image/png' sizes='32x32' href='/favicon-32x32.png' />
+    <link rel='icon' type='image/png' sizes='16x16' href='/favicon-16x16.png' />
+    <link rel='manifest' href='/site.webmanifest' />
+    <link rel='mask-icon' href='/safari-pinned-tab.svg' color='#5bbad5' />
+    <meta name='msapplication-TileColor' content='#603cba' />
+    <meta name='theme-color' content='#ffffff' />
+    <title>{title}</title>
+    <meta property='og:title' content={title + " - Simmarith.com"} />
+    <meta property='og:site_name' content='Simmarith.com' />
+    <meta property='og:url' content='https://simmarith.com' />
+    <meta
+      property='og:description'
+      content='My personal homepage containing some sample projects that I managed to somewhat-complete over the years'
+    />
+    <meta property='og:type' content='website' />
+    <meta property='og:image' content='https://simmarith.com/logo.png' />
+  </head>
+  <body>
+    <slot />
+  </body>
 </html>
 <style is:global>
-	:root {
-		--accent: 124, 58, 237;
-		--accent-gradient: linear-gradient(45deg, rgb(var(--accent)), #da62c4 30%, white 60%);
-		--background: #111;
-		--background-light: #333;
-		--text: #aaa;
-		color: var(--text);
-	}
-	html {
-		font-family: system-ui, sans-serif;
-		background: radial-gradient(circle, rgba(27,27,27,1) 0%, rgba(17,17,17,1) 27%, rgba(0,0,0,1) 100%);
-
-	}
-	code {
-		font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
-			Bitstream Vera Sans Mono, Courier New, monospace;
-	}
-	body {
-		margin: 0;
-	}
+  :root {
+    --accent: 124, 58, 237;
+    --accent-gradient: linear-gradient(
+      45deg,
+      rgb(var(--accent)),
+      #da62c4 30%,
+      white 60%
+    );
+    --background: #111;
+    --background-light: #333;
+    --text: #aaa;
+    color: var(--text);
+  }
+  html {
+    font-family: system-ui, sans-serif;
+    background: radial-gradient(
+      circle,
+      rgba(27, 27, 27, 1) 0%,
+      rgba(17, 17, 17, 1) 27%,
+      rgba(0, 0, 0, 1) 100%
+    );
+  }
+  code {
+    font-family:
+      Menlo,
+      Monaco,
+      Lucida Console,
+      Liberation Mono,
+      DejaVu Sans Mono,
+      Bitstream Vera Sans Mono,
+      Courier New,
+      monospace;
+  }
+  body {
+    margin: 0;
+  }
 </style>

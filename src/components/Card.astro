@@ -1,6 +1,6 @@
 ---
 export interface Props {
-  img?: string
+  img?: ImageMetadata
   title: string
   body: string
   href: string
@@ -11,6 +11,7 @@ export interface Props {
 }
 
 const { img, href, title, body, top, left, skew, round } = Astro.props
+import { Image } from 'astro:assets'
 ---
 
 <div
@@ -18,7 +19,7 @@ const { img, href, title, body, top, left, skew, round } = Astro.props
   style={`top: ${top}vh;left: ${left}vw; transform:rotate(${skew}deg);`}
 >
   <a href={href}>
-    {img && <img src={img} />}
+    {img && <Image src={img} alt={title} width={200} />}
     <div class='text-content'>
       <h2>
         {title}
@@ -55,12 +56,12 @@ const { img, href, title, body, top, left, skew, round } = Astro.props
         left: 0;
         opacity: 0;
         line-height: 1.4;
-        transition: opacity 0.2s, top 0.6s;
+        transition:
+          opacity 0.2s,
+          top 0.6s;
       }
 
       img {
-        height: 20vw;
-        max-height: 200px;
         border-radius: 0.5rem;
         opacity: 0.3;
         transition: opacity 0.3s;
@@ -105,9 +106,9 @@ const { img, href, title, body, top, left, skew, round } = Astro.props
       }
 
       &:is(:hover) {
-      box-shadow: none;
-      background-color: rgba(0, 0, 0, 0);
-    }
+        box-shadow: none;
+        background-color: rgba(0, 0, 0, 0);
+      }
     }
   }
 

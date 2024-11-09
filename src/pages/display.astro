@@ -22,11 +22,15 @@ import SicherImage from '../assets/sicher_black_bg.svg'
   :root {
     background-color: #222;
   }
+  body {
+    margin: 0;
+  }
+
   .mvv-departure-monitor {
-    width: calc(50vw - 1rem);
+    width: 50vw;
     position: absolute;
-    right: 1rem;
-    top: 1rem;
+    right: 0;
+    top: 0;
     .mvv-monitor-header img {
       position: relative;
       background: none;
@@ -34,11 +38,11 @@ import SicherImage from '../assets/sicher_black_bg.svg'
     }
   }
   .wiki-article {
-    width: calc(50vw - 1rem);
-    height: 100vw;
+    width: 50vw;
+    height: 100vh;
     position: absolute;
-    left: 1rem;
-    top: 1rem;
+    left: 0;
+    top: 0;
   }
   .sicher-image {
     position: absolute;
@@ -87,9 +91,7 @@ import SicherImage from '../assets/sicher_black_bg.svg'
       }
     })
 
-    client.on('disconnect', () => {
-
-    })
+    client.on('disconnect', () => {})
   })
 
   window.setTimeout(() => {

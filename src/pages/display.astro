@@ -64,7 +64,7 @@ import SicherImage from '../assets/sicher_black_bg.svg'
 <script>
   import mqtt from 'mqtt' // import namespace "mqtt"
   window.addEventListener('load', function () {
-    const client = mqtt.connect('ws://10.10.10.83:9001')
+    const client = mqtt.connect('wss://simmarith.com:9001')
     const topic = 'mumalab/#'
 
     client.on('connect', () => {

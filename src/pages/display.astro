@@ -77,7 +77,7 @@ import SicherImage from '../assets/sicher_black_bg.svg'
       // message is Buffer
       console.log(message.toString(), topic)
       if (topic === 'mumalab/alarm') {
-        const audio = new Audio('/public/whistle.wav')
+        const audio = new Audio('/public/whistle.mp3')
         audio.play()
         const alert = document.createElement('div')
         alert.classList.add('alert')
@@ -85,6 +85,10 @@ import SicherImage from '../assets/sicher_black_bg.svg'
         alert.appendChild(alertText)
         document.body.appendChild(alert)
       }
+    })
+
+    client.on('disconnect', () => {
+
     })
   })
 

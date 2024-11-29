@@ -1,19 +1,12 @@
 ---
-import { Image } from 'astro:assets'
-import SicherImage from '../assets/sicher_black_bg.svg'
 ---
 
 <script src='https://unpkg.com/mqtt/dist/mqtt.min.js'></script>
-<iframe
-  class='wiki-article'
-  src='https://wiki.munichmakerlab.de/wiki/Special:Random'
-  frameborder='0'></iframe>
 <div
   class='mvv-departure-monitor'
   monitor-configuration='eyJsYW5ndWFnZSI6eyJkZXBhcnR1cmUiOiJBYmZhaHJ0IiwidHJhaW5TdG9wcyI6IkhhbHRlc3RlbGxlbiIsImRpcmVjdGlvbiI6IlJpY2h0dW5nIiwiZm9vdGVyTm90ZSI6IqkgQ29weXJpZ2h0IiwiZm9vdGVyVGV4dCI6IldlaXRlcmUgRmFocnBsYW5hdXNr/G5mdGUgdW50ZXIgd3d3Lm12di1hdXNrdW5mdC5kZSBvZGVyIG1pdCBkZXIgTVZWLUFwcCIsImhlYWRlclRleHQiOiJBYmZhaHJ0ZW4gZvxyIGhldXRlLCAiLCJsYW5ndWFnZSI6ImRlIiwibGluZSI6IkxpbmllIiwibGl2ZSI6IkxpdmUiLCJzdG9wIjoiSGFsdGVzdGVsbGUiLCJ0cmFjayI6IkdsZWlzIn0sImlzRnVsbHNjcmVlbiI6ZmFsc2UsInN0YXRpb25zIjpbeyJzdGF0aW9uIjp7InVzYWdlIjoic2YiLCJ0eXBlIjoiYW55IiwibmFtZSI6Ik38bmNoZW4sIExlb25yb2RwbGF0eiIsInN0YXRlbGVzcyI6IjkxMDAwMDExIiwiYW55VHlwZSI6InN0b3AiLCJzb3J0IjoiMiIsInF1YWxpdHkiOiI0MjQiLCJiZXN0IjoiMSIsIm9iamVjdCI6Ikxlb25yb2RwbGF0eiIsIm1haW5Mb2MiOiJN/G5jaGVuIiwibW9kZXMiOiI0LDUiLCJyZWYiOnsiaWQiOiI5MTAwMDAxMSIsImdpZCI6ImRlOjA5MTYyOjExIiwib21jIjoiOTE2MjAwMCIsInBsYWNlSUQiOiIxIiwicGxhY2UiOiJN/G5jaGVuIiwiY29vcmRzIjoiMTI4NTQ1MC4wMDAwMCw1ODY2NTc0LjAwMDAwIn0sImlkIjoiZGU6MDkxNjI6MTEifSwibGluZXMiOlt7Im51bWJlciI6IjEyIiwic3ltYm9sIjoiMDIwMTIuc3ZnIiwiZGlyZWN0aW9uIjoiUm9tYW5wbGF0eiIsInN0YXRlbGVzcyI6InN3bTowMjAxMjpHOkg6MDE0IiwibmFtZSI6IlRyYW0ifSx7Im51bWJlciI6IjEyIiwic3ltYm9sIjoiMDIwMTIuc3ZnIiwiZGlyZWN0aW9uIjoiU2NoZWlkcGxhdHoiLCJzdGF0ZWxlc3MiOiJzd206MDIwMTI6RzpSOjAxNCIsIm5hbWUiOiJUcmFtIn0seyJudW1iZXIiOiIyMCIsInN5bWJvbCI6IjAyMDIwLnN2ZyIsImRpcmVjdGlvbiI6IkthcmxzcGxhdHogKFN0YWNodXMpIiwic3RhdGVsZXNzIjoic3dtOjAyMDIwOkc6SDowMTQiLCJuYW1lIjoiVHJhbSJ9LHsibnVtYmVyIjoiMjAiLCJzeW1ib2wiOiIwMjAyMC5zdmciLCJkaXJlY3Rpb24iOiJNb29zYWNoIiwic3RhdGVsZXNzIjoic3dtOjAyMDIwOkc6UjowMTQiLCJuYW1lIjoiVHJhbSJ9LHsibnVtYmVyIjoiMjEiLCJzeW1ib2wiOiIwMjAyMS5zdmciLCJkaXJlY3Rpb24iOiJTdC4tVmVpdC1TdHJh32UiLCJzdGF0ZWxlc3MiOiJzd206MDIwMjE6RzpIOjAxNCIsIm5hbWUiOiJUcmFtIn0seyJudW1iZXIiOiIyMSIsInN5bWJvbCI6IjAyMDIxLnN2ZyIsImRpcmVjdGlvbiI6Ildlc3RmcmllZGhvZiIsInN0YXRlbGVzcyI6InN3bTowMjAyMTpHOlI6MDE0IiwibmFtZSI6IlRyYW0ifSx7Im51bWJlciI6Ik4yMCIsInN5bWJvbCI6IjMyTjIwLnN2ZyIsImRpcmVjdGlvbiI6IkthcmxzcGxhdHogKFN0YWNodXMpIiwic3RhdGVsZXNzIjoic3dtOjMyOTIwOkc6SDowMTQiLCJuYW1lIjoiTmFjaHRUcmFtIn0seyJudW1iZXIiOiJOMjAiLCJzeW1ib2wiOiIzMk4yMC5zdmciLCJkaXJlY3Rpb24iOiJNb29zYWNoIiwic3RhdGVsZXNzIjoic3dtOjMyOTIwOkc6UjowMTQiLCJuYW1lIjoiTmFjaHRUcmFtIn0seyJudW1iZXIiOiI1MyIsInN5bWJvbCI6IjI0MDUzLnN2ZyIsImRpcmVjdGlvbiI6IkFpZGVuYmFjaHN0cmHfZSBVIHZpYSBSb3RrcmV1enBsYXR6IFUiLCJzdGF0ZWxlc3MiOiJzd206MDMwNTM6RzpIOjAxNCIsIm5hbWUiOiJNZXRyb0J1cyJ9LHsibnVtYmVyIjoiNTMiLCJzeW1ib2wiOiIyNDA1My5zdmciLCJkaXJlY3Rpb24iOiJN/G5jaG5lciBGcmVpaGVpdCBVIiwic3RhdGVsZXNzIjoic3dtOjAzMDUzOkc6UjowMTQiLCJuYW1lIjoiTWV0cm9CdXMifSx7Im51bWJlciI6Ik40MyIsInN5bWJvbCI6IjMzTjQzLnN2ZyIsImRpcmVjdGlvbiI6Ik9zdGJhaG5ob2YiLCJzdGF0ZWxlc3MiOiJzd206MzNONDM6RzpIOjAxNCIsIm5hbWUiOiJOYWNodEJ1cyJ9LHsibnVtYmVyIjoiTjQ0Iiwic3ltYm9sIjoiMzNONDQuc3ZnIiwiZGlyZWN0aW9uIjoiT3N0YmFobmhvZiIsInN0YXRlbGVzcyI6InN3bTozM040NDpHOkg6MDE0IiwibmFtZSI6Ik5hY2h0QnVzIn1dLCJsZWFkVGltZU1pbnV0ZXMiOjB9XSwibGluZXMiOltdLCJtYXhSZXN1bHRzIjoxMCwiZmV0Y2hJbnRlcnZhbEluTWludXRlcyI6Mywic2hvd05vdGlmaWNhdGlvbiI6dHJ1ZX0='
 >
 </div>
-<Image src={SicherImage} alt='Das system ist kaputt :(' class='sicher-image' />
 <script
   type='text/javascript'
   src='https://www.mvv-muenchen.de/typo3conf/ext/sn_mvv_efa/Resources/Public/mvv-monitor/mvv-monitor.min.js'
@@ -27,9 +20,9 @@ import SicherImage from '../assets/sicher_black_bg.svg'
   }
 
   .mvv-departure-monitor {
-    width: 50vw;
+    width: 100vw;
     position: absolute;
-    right: 0;
+    left: 0;
     top: 0;
     .mvv-monitor-header img {
       position: relative;
@@ -37,19 +30,6 @@ import SicherImage from '../assets/sicher_black_bg.svg'
       float: right;
     }
   }
-  .wiki-article {
-    width: 50vw;
-    height: 100vh;
-    position: absolute;
-    left: 0;
-    top: 0;
-  }
-  .sicher-image {
-    position: absolute;
-    bottom: 0px;
-    right: 0px;
-  }
-
   .alert {
     position: fixed;
     top: 50%;
@@ -88,13 +68,12 @@ import SicherImage from '../assets/sicher_black_bg.svg'
         const alertText = document.createTextNode(message.toString())
         alert.appendChild(alertText)
         document.body.appendChild(alert)
+        this.window.setTimeout(() => {
+          this.document.body.removeChild(alert)
+        }, 30000)
       }
     })
 
     client.on('disconnect', () => {})
   })
-
-  window.setTimeout(() => {
-    location.reload(true)
-  }, 30000)
 </script>

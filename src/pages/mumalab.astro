@@ -1,0 +1,27 @@
+---
+import Layout from '../layouts/Layout.astro'
+import InfoPage from '../components/InfoPage.astro'
+import MumalabImage from '../assets/mumalab-logo.png'
+import { ViewTransitions } from 'astro:transitions'
+---
+
+<Layout title='Munich Maker Lab Website'>
+  <main>
+    <ViewTransitions />
+    <InfoPage
+      title='Munich Maker Lab Website'
+      image={MumalabImage}
+      link='https://munichmakerlab.de/'
+    >
+      <p>
+        I've rewritten the Website for the Munich Maker Lab, a non profit org
+        that I frequently participate in. For that project I've also used Astro
+        (just like this page) so that other people can easily edit any page
+        using only Markdown.
+      </p>
+      <p>
+        It also includes Frontend magic to display the current Mastodon feed on the main page, written in Vue.
+      </p>
+    </InfoPage>
+  </main>
+</Layout>

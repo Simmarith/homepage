@@ -27,7 +27,7 @@ import Email from '../assets/email.png'
         </div>
         <div class='info'>
           <span class='label'>Age:</span>
-          <span class='value'>26</span>
+          <span class='value'>28</span>
         </div>
         <div class='info'>
           <span class='label'>Gender:</span>
@@ -44,7 +44,7 @@ import Email from '../assets/email.png'
       </div>
     </div>
     <div class='content'>
-      <h1>Hi! I'm Adrian</h1>
+      <h1>Hi! I'm Adrian.</h1>
       <p>
         This is my CV. You'll be able to find most of the relevant info about me
         here.
@@ -114,6 +114,10 @@ import Email from '../assets/email.png'
     { word: 'JavaScript', freq: 70 },
     { word: 'Bash', freq: 50 },
     { word: 'Linux', freq: 70 },
+    { word: 'NixOS', freq: 30 },
+    { word: 'Ansible', freq: 30 },
+    { word: 'Microcontroller', freq: 15 },
+    { word: 'C++', freq: 20 },
     { word: 'AWS', freq: 70 },
     { word: 'HTML', freq: 30 },
     { word: 'CSS', freq: 30 },
@@ -126,7 +130,10 @@ import Email from '../assets/email.png'
     { word: 'Unity', freq: 30 },
     { word: 'DevOps', freq: 30 },
     { word: 'Godot', freq: 30 },
-    { word: 'Networking', freq: 30 },
+    { word: 'Networking', freq: 40 },
+    { word: 'Unify', freq: 40 },
+    { word: 'Client Management', freq: 50 },
+    { word: 'Entra ID', freq: 30 },
     { word: 'CI/CD', freq: 20 },
   ]
 
@@ -135,7 +142,7 @@ import Email from '../assets/email.png'
     list.push([db[i]['word'], db[i]['freq']])
   }
 
-  WordCloud.minFontSize = '15px'
+  WordCloud.minFontSize = 15
   WordCloud(document.getElementById('word_cloud'), { list: list })
 </script>
 
@@ -173,6 +180,11 @@ import Email from '../assets/email.png'
     border-radius: 50%;
     background-color: var(--green);
     margin: 2rem 5rem;
+
+    &:hover {
+      transform: scale(1.5);
+      transition: all 20s ease-in;
+    }
   }
 
   .general-info {
@@ -234,6 +246,10 @@ import Email from '../assets/email.png'
     h3 {
       margin-left: 1rem;
       transform: translateY(8rem);
+    }
+    
+    #word_cloud {
+      margin-top: 5rem;
     }
   }
 

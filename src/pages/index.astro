@@ -139,6 +139,7 @@ let targetLiftHeight = 0;
 let mouseDownPosition = new THREE.Vector2();
 let isDragging = false;
 let activePointerId: number | null = null;
+let activePointerType = '';
 
 function showProjectPanel(project: any) {
     const panel = document.getElementById('project-panel');
@@ -190,6 +191,7 @@ function init() {
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.domElement.style.touchAction = 'none';
     container.appendChild(renderer.domElement);
 
     controls = new OrbitControls(camera, renderer.domElement);
@@ -209,7 +211,7 @@ function init() {
 
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
+    window.addEventListener('pointercancel', onPointerCancel);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('resize', onWindowResize);
     
@@ -515,6 +517,10 @@ function onPointerDown(event: PointerEvent) {
         return;
     }
 
+    if (event.pointerType === 'touch') {
+        event.preventDefault();
+    }
+
     mouseDownPosition.set(event.clientX, event.clientY);
     isDragging = false;
     
@@ -527,6 +533,7 @@ function onPointerDown(event: PointerEvent) {
     if (intersects.length > 0) {
         selectedCartridge = intersects[0].object as THREE.Mesh;
         activePointerId = event.pointerId;
+        activePointerType = event.pointerType;
         controls.enabled = false; // Disable orbit controls when dragging
         renderer.domElement.setPointerCapture(event.pointerId);
         
@@ -559,9 +566,9 @@ function onPointerUp(event: PointerEvent) {
         Math.pow(event.clientX - mouseDownPosition.x, 2) +
         Math.pow(event.clientY - mouseDownPosition.y, 2)
     );
-    const clickThreshold = event.pointerType === 'touch' ? 12 : 5;
+    const clickThreshold = activePointerType === 'touch' ? 24 : 5;
     
-    if (selectedCartridge && dragDistance < clickThreshold) {
+    if (selectedCartridge && !isDragging && dragDistance < clickThreshold) {
         // It's a click, not a drag - show info panel
         showProjectPanel(selectedCartridge.userData.project);
     }
@@ -572,12 +579,29 @@ function onPointerUp(event: PointerEvent) {
     targetLiftHeight = 0;
     selectedCartridge = null;
     activePointerId = null;
+    activePointerType = '';
     controls.enabled = true; // Re-enable orbit controls
     isDragging = false;
 
     if (renderer.domElement.hasPointerCapture(event.pointerId)) {
         renderer.domElement.releasePointerCapture(event.pointerId);
     }
+}
+
+function onPointerCancel(event: PointerEvent) {
+    if (activePointerId !== null && activePointerId !== event.pointerId) {
+        return;
+    }
+
+    if (selectedCartridge) {
+        selectedCartridge.userData.originalY = undefined;
+    }
+    targetLiftHeight = 0;
+    selectedCartridge = null;
+    activePointerId = null;
+    activePointerType = '';
+    controls.enabled = true;
+    isDragging = false;
 }
 
 function onPointerMove(event: PointerEvent) {
@@ -590,7 +614,18 @@ function onPointerMove(event: PointerEvent) {
     }
 
     if (selectedCartridge) {
-        isDragging = true;
+        const dragDistance = Math.sqrt(
+            Math.pow(event.clientX - mouseDownPosition.x, 2) +
+            Math.pow(event.clientY - mouseDownPosition.y, 2)
+        );
+        const dragStartThreshold = activePointerType === 'touch' ? 10 : 3;
+        if (!isDragging && dragDistance > dragStartThreshold) {
+            isDragging = true;
+        }
+
+        if (!isDragging) {
+            return;
+        }
         
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;

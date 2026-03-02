@@ -18,83 +18,616 @@ import { ViewTransitions } from 'astro:transitions'
 <Layout title="Adrian's Stuff.">
   <ViewTransitions />
   <main>
-    <h1>Adrian's Stuff</h1>
-    <span class="desktop-hint">Better on desktop!</span>
-    <Card
-      img={VimClutch}
-      href="https://github.com/munichmakerlab/vim-clutch"
-      title="Vim Clutch"
-      body="Using a foot pedal to switch in/out of insert mode in vim"
-      top={10}
-      left={70}
-      skew={20}
-    />
-    <Card
-      img={CableHolder}
-      href="https://www.printables.com/model/289090-prusa-mini-usb-cable-holder"
-      title="Prusa Mini Cable Holder"
-      body="A quick fix for a quick issue"
-      top={55}
-      left={5}
-      skew={-20}
-    />
-    <Card
-      img={Keyboard}
-      href="https://wiki.munichmakerlab.de/wiki/Dactyl-Manuform"
-      title="Handsoldered Dactyl-Manuform"
-      body="I've built my own keyboard off of templates from the internet."
-      top={20}
-      left={10}
-      skew={20}
-    />
-    <Card
-      img={NumGrid}
-      href="/numgrid"
-      title="NumGrid"
-      body="I've built a small puzzle game on a quiet weekend."
-      top={60}
-      left={70}
-      skew={-30}
-    />
-    <Card
-      img={Aeropress}
-      href="/aeropress_filter"
-      title="Aeropress Filter Travel Box"
-      body="The ultimate companion to keep all your filters on the go!"
-      top={53}
-      left={85}
-      skew={18}
-    />
-    <Card
-      img={VirtualBooking}
-      href="https://github.com/mumahack/virtualBookingCom"
-      title="VirtualBooking.com"
-      body="Booking a vacation in VR"
-      top={60}
-      left={40}
-      skew={-5}
-    />
-    <Card
-      img={Uberhacker}
-      href="/uberhacker"
-      title="Uberhacker"
-      body="A multiplayer hacking game with IT related minigames"
-      top={10}
-      left={50}
-      skew={10}
-      round
-    />
-    <Card
-      img={Mumalab}
-      href="/mumalab"
-      title="Munich Maker Lab Website"
-      body="A rewrite of the Munich Maker Lab Website using Astro"
-      top={10}
-      left={30}
-      skew={-10}
-    />
+    <div id="canvas-container"></div>
+    
+        <!-- Project Info Panel -->
+        <div id="project-overlay" style="display: none;"></div>
+        <div id="project-panel" style="display: none;">
+      <button id="close-panel">✕</button>
+      <h2 id="panel-title"></h2>
+      <p id="panel-body"></p>
+      <a id="panel-link" href="#" target="_blank" rel="noopener">View Project →</a>
+    </div>
+    
+    <div class="old-cards" style="display: none;">
+      <h1>Adrian's Stuff</h1>
+      <span class="desktop-hint">Better on desktop!</span>
+      <Card
+        img={VimClutch}
+        href="https://github.com/munichmakerlab/vim-clutch"
+        title="Vim Clutch"
+        body="Using a foot pedal to switch in/out of insert mode in vim"
+        top={10}
+        left={70}
+        skew={20}
+      />
+      <Card
+        img={CableHolder}
+        href="https://www.printables.com/model/289090-prusa-mini-usb-cable-holder"
+        title="Prusa Mini Cable Holder"
+        body="A quick fix for a quick issue"
+        top={55}
+        left={5}
+        skew={-20}
+      />
+      <Card
+        img={Keyboard}
+        href="https://wiki.munichmakerlab.de/wiki/Dactyl-Manuform"
+        title="Handsoldered Dactyl-Manuform"
+        body="I've built my own keyboard off of templates from the internet."
+        top={20}
+        left={10}
+        skew={20}
+      />
+      <Card
+        img={NumGrid}
+        href="/numgrid"
+        title="NumGrid"
+        body="I've built a small puzzle game on a quiet weekend."
+        top={60}
+        left={70}
+        skew={-30}
+      />
+      <Card
+        img={Aeropress}
+        href="/aeropress_filter"
+        title="Aeropress Filter Travel Box"
+        body="The ultimate companion to keep all your filters on the go!"
+        top={53}
+        left={85}
+        skew={18}
+      />
+      <Card
+        img={VirtualBooking}
+        href="https://github.com/mumahack/virtualBookingCom"
+        title="VirtualBooking.com"
+        body="Booking a vacation in VR"
+        top={60}
+        left={40}
+        skew={-5}
+      />
+      <Card
+        img={Uberhacker}
+        href="/uberhacker"
+        title="Uberhacker"
+        body="A multiplayer hacking game with IT related minigames"
+        top={10}
+        left={50}
+        skew={10}
+        round
+      />
+      <Card
+        img={Mumalab}
+        href="/mumalab"
+        title="Munich Maker Lab Website"
+        body="A rewrite of the Munich Maker Lab Website using Astro"
+        top={10}
+        left={30}
+        skew={-10}
+      />
+    </div>
   </main>
 </Layout>
+
+<script>
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import * as CANNON from 'cannon-es';
+
+let scene: THREE.Scene;
+let camera: THREE.PerspectiveCamera;
+let renderer: THREE.WebGLRenderer;
+let controls: OrbitControls;
+let world: CANNON.World;
+let cartridges: THREE.Mesh[] = [];
+let raycaster = new THREE.Raycaster();
+let mouse = new THREE.Vector2();
+let selectedCartridge: THREE.Mesh | null = null;
+let targetRotation = new THREE.Quaternion();
+let targetLiftHeight = 0;
+let mouseDownPosition = new THREE.Vector2();
+let isDragging = false;
+
+function showProjectPanel(project: any) {
+    const panel = document.getElementById('project-panel');
+    const overlay = document.getElementById('project-overlay');
+    const main = document.querySelector('main');
+    const title = document.getElementById('panel-title');
+    const body = document.getElementById('panel-body');
+    const link = document.getElementById('panel-link') as HTMLAnchorElement;
+    
+    if (panel && overlay && title && body && link) {
+        title.textContent = project.title;
+        body.textContent = project.body;
+        link.href = project.href;
+        panel.style.display = 'block';
+        overlay.style.display = 'block';
+        if (main) {
+            main.classList.add('panel-open');
+        }
+    }
+}
+
+function closePanel() {
+    const panel = document.getElementById('project-panel');
+    const overlay = document.getElementById('project-overlay');
+    const main = document.querySelector('main');
+    if (panel) {
+        panel.style.display = 'none';
+    }
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    if (main) {
+        main.classList.remove('panel-open');
+    }
+}
+
+function isPanelOpen() {
+    const main = document.querySelector('main');
+    return !!main && main.classList.contains('panel-open');
+}
+
+function init() {
+    const container = document.getElementById('canvas-container');
+    if (!container) return;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a1a);
+    
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    camera.position.set(0, 8, 2);
+    camera.lookAt(0, -1, 0);
+
+    // Setup physics world
+    world = new CANNON.World();
+    world.gravity.set(0, -4, 0);
+    world.broadphase = new CANNON.NaiveBroadphase();
+
+    createTable();
+    createCartridges();
+    animate();
+
+    window.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('resize', onWindowResize);
+    
+    // Setup close button
+    const closeButton = document.getElementById('close-panel');
+    if (closeButton) {
+        closeButton.addEventListener('click', closePanel);
+    }
+
+    const overlay = document.getElementById('project-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', closePanel);
+    }
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function createTable() {
+    // Visual table with wood texture
+    const textureLoader = new THREE.TextureLoader();
+    const woodTexture = textureLoader.load('/wood.png');
+    
+    const tableGeometry = new THREE.BoxGeometry(12, 0.3, 8);
+    const tableMaterial = new THREE.MeshStandardMaterial({ 
+        map: woodTexture,
+        roughness: 0.8 
+    });
+    const table = new THREE.Mesh(tableGeometry, tableMaterial);
+    table.position.y = -2;
+    scene.add(table);
+
+    // Physics table (static)
+    const tableShape = new CANNON.Box(new CANNON.Vec3(6, 0.15, 4));
+    const tableBody = new CANNON.Body({ mass: 0 }); // mass 0 = static
+    tableBody.addShape(tableShape);
+    tableBody.position.set(0, -2, 0);
+    world.addBody(tableBody);
+
+    // Add lighting so we can see the table better
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambientLight);
+    
+    // Main directional light from above
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    directionalLight.position.set(0, 10, 0);
+    scene.add(directionalLight);
+    
+    // Fill lights from sides for better illumination
+    const fillLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
+    fillLight1.position.set(10, 5, 5);
+    scene.add(fillLight1);
+    
+    const fillLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+    fillLight2.position.set(-10, 5, -5);
+    scene.add(fillLight2);
+}
+
+function createCartridges() {
+    const textureLoader = new THREE.TextureLoader();
+    const stlLoader = new STLLoader();
+    
+    // Project data with images and info
+    const projects = [
+        { image: '/src/assets/vim-clutch.jpg', title: 'Vim Clutch', body: 'Using a foot pedal to switch in/out of insert mode in vim', href: 'https://github.com/munichmakerlab/vim-clutch' },
+        { image: '/src/assets/cable-holder.webp', title: 'Prusa Mini Cable Holder', body: 'A quick fix for a quick issue', href: 'https://www.printables.com/model/289090-prusa-mini-usb-cable-holder' },
+        { image: '/src/assets/keyboard.jpeg', title: 'Handsoldered Dactyl-Manuform', body: "I've built my own keyboard off of templates from the internet.", href: 'https://wiki.munichmakerlab.de/wiki/Dactyl-Manuform' },
+        { image: '/src/assets/numgrid-logo.png', title: 'NumGrid', body: "I've built a small puzzle game on a quiet weekend.", href: '/numgrid' },
+        { image: '/src/assets/neocities.png', title: 'Neocities', body: 'My Pixelart, cozy page on Neocities', href: 'https://simmarith.neocities.org/', special: true },
+        { image: '/src/assets/aeropress_filter.webp', title: 'Aeropress Filter Travel Box', body: 'The ultimate companion to keep all your filters on the go!', href: '/aeropress_filter' },
+        { image: '/src/assets/virtualbooking.png', title: 'VirtualBooking.com', body: 'Booking a vacation in VR', href: 'https://github.com/mumahack/virtualBookingCom' },
+        { image: '/src/assets/uberhacker.png', title: 'Uberhacker', body: 'A multiplayer hacking game with IT related minigames', href: '/uberhacker' },
+        { image: '/src/assets/mumalab-logo.png', title: 'Munich Maker Lab Website', body: 'A rewrite of the Munich Maker Lab Website using Astro', href: '/mumalab', special: true },
+        { image: '/src/assets/makertalk.svg', title: 'MakerTalk', body: 'A modern, open-source team chat application designed to remain free and accessible forever', href: 'https://github.com/Simmarith/makertalk', special: true }
+    ];
+
+    // Load STL once and reuse
+    stlLoader.load('/NES_Cartridge.stl', (stlGeometry) => {
+        stlGeometry.computeVertexNormals();
+        stlGeometry.center();
+        stlGeometry.scale(0.01, 0.01, 0.01);
+        
+        projects.forEach((project, i) => {
+            // Load texture
+            const texture = textureLoader.load(project.image);
+            texture.flipY = false;
+            // Don't repeat the texture - we want it to display once
+            texture.wrapS = THREE.ClampToEdgeWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+            
+            // Clone the geometry for this cartridge
+            const geometry = stlGeometry.clone();
+            
+            // Create groups for material assignment based on face normals
+            const positionAttribute = geometry.getAttribute('position');
+            const normalAttribute = geometry.getAttribute('normal');
+            
+            const faceCount = positionAttribute.count / 3;
+            let labelCount = 0;
+            let otherCount = 0;
+            
+            // Find bounding box of all upward-facing faces first
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            
+            // First pass: find bounds of upward-facing surface
+            for (let i = 0; i < faceCount; i++) {
+                const nz = normalAttribute.getZ(i * 3);
+                if (nz > 0.7) {
+                    for (let j = 0; j < 3; j++) {
+                        const idx = i * 3 + j;
+                        const x = positionAttribute.getX(idx);
+                        const y = positionAttribute.getY(idx);
+                        minX = Math.min(minX, x);
+                        maxX = Math.max(maxX, x);
+                        minY = Math.min(minY, y);
+                        maxY = Math.max(maxY, y);
+                    }
+                }
+            }
+            
+            // Define center label area (80% of the width and height)
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const labelWidthHalf = (maxX - minX) * 0.4; // 80% total width
+            const labelHeightHalf = (maxY - minY) * 0.4; // 80% total height
+            
+            // Second pass: count faces in label area vs other
+            for (let i = 0; i < faceCount; i++) {
+                const nz = normalAttribute.getZ(i * 3);
+                if (nz > 0.7) {
+                    // Check if this face is in the center label area
+                    let inLabelArea = true;
+                    for (let j = 0; j < 3; j++) {
+                        const idx = i * 3 + j;
+                        const x = positionAttribute.getX(idx);
+                        const y = positionAttribute.getY(idx);
+                        if (Math.abs(x - centerX) > labelWidthHalf || 
+                            Math.abs(y - centerY) > labelHeightHalf) {
+                            inLabelArea = false;
+                            break;
+                        }
+                    }
+                    if (inLabelArea) {
+                        labelCount += 3;
+                    } else {
+                        otherCount += 3;
+                    }
+                } else {
+                    otherCount += 3;
+                }
+            }
+            
+            // Generate UV coordinates
+            const uvs = new Float32Array(positionAttribute.count * 2);
+            const rangeX = labelWidthHalf * 2;
+            const rangeY = labelHeightHalf * 2;
+            
+            for (let i = 0; i < faceCount; i++) {
+                const nz = normalAttribute.getZ(i * 3);
+                
+                // Check if all vertices of this face are in the label area
+                let inLabelArea = nz > 0.7;
+                if (inLabelArea) {
+                    for (let j = 0; j < 3; j++) {
+                        const idx = i * 3 + j;
+                        const x = positionAttribute.getX(idx);
+                        const y = positionAttribute.getY(idx);
+                        if (Math.abs(x - centerX) > labelWidthHalf || 
+                            Math.abs(y - centerY) > labelHeightHalf) {
+                            inLabelArea = false;
+                            break;
+                        }
+                    }
+                }
+                
+                for (let j = 0; j < 3; j++) {
+                    const idx = i * 3 + j;
+                    if (inLabelArea) {
+                        // Map label area positions to UV coordinates (0-1 range)
+                        const x = positionAttribute.getX(idx);
+                        const y = positionAttribute.getY(idx);
+                        uvs[idx * 2] = (x - (centerX - labelWidthHalf)) / rangeX;
+                        uvs[idx * 2 + 1] = 1 - (y - (centerY - labelHeightHalf)) / rangeY; // Flip V coordinate
+                    } else {
+                        // Other faces get default UVs
+                        uvs[idx * 2] = 0;
+                        uvs[idx * 2 + 1] = 0;
+                    }
+                }
+            }
+            
+            geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+            
+            // Third pass: reorganize indices so label faces come first
+            const indices = geometry.getIndex();
+            let newIndices: number[];
+            
+            if (indices) {
+                newIndices = Array.from(indices.array as Uint32Array | Uint16Array);
+            } else {
+                newIndices = Array.from({length: positionAttribute.count}, (_, i) => i);
+            }
+            
+            const labelIndices: number[] = [];
+            const otherIndices: number[] = [];
+            
+            for (let i = 0; i < faceCount; i++) {
+                const nz = normalAttribute.getZ(i * 3);
+                const faceIndices = [newIndices[i * 3], newIndices[i * 3 + 1], newIndices[i * 3 + 2]];
+                
+                // Check if this face is in label area
+                let inLabelArea = nz > 0.7;
+                if (inLabelArea) {
+                    for (let j = 0; j < 3; j++) {
+                        const idx = i * 3 + j;
+                        const x = positionAttribute.getX(idx);
+                        const y = positionAttribute.getY(idx);
+                        if (Math.abs(x - centerX) > labelWidthHalf || 
+                            Math.abs(y - centerY) > labelHeightHalf) {
+                            inLabelArea = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (inLabelArea) {
+                    labelIndices.push(...faceIndices);
+                } else {
+                    otherIndices.push(...faceIndices);
+                }
+            }
+            
+            const reorganizedIndices = [...labelIndices, ...otherIndices];
+            geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(reorganizedIndices), 1));
+            
+            // Create materials - label with texture, body uses gold metallic for special cartridges
+            const bodyMaterial = project.special 
+                ? new THREE.MeshStandardMaterial({ 
+                    color: 0xFFD700,    // Gold color
+                    roughness: 0.3,      // Lower roughness for metallic shine
+                    metalness: 0.9       // High metalness for metallic look
+                })
+                : new THREE.MeshStandardMaterial({ 
+                    color: 0xaaaaaa,
+                    roughness: 0.6,
+                    metalness: 0
+                });
+            
+            const materials = [
+                new THREE.MeshStandardMaterial({ map: texture }),
+                bodyMaterial
+            ];
+            
+            // Add groups for material assignment
+            geometry.clearGroups();
+            geometry.addGroup(0, labelCount, 0); // Label faces use material 0 (textured)
+            geometry.addGroup(labelCount, otherCount, 1); // Other faces use material 1 (dark)
+            
+            const cartridge = new THREE.Mesh(geometry, materials);
+            
+            cartridge.position.set(
+                (Math.random() - 0.5) * 8,
+                0.2 + i * 0.3,
+                (Math.random() - 0.5) * 6
+            );
+            // Rotate to lay flat on the table
+            cartridge.rotateX(Math.PI / 2);
+            cartridge.rotateZ(Math.PI);
+            cartridge.userData = { project };
+            scene.add(cartridge);
+            
+            // Physics body - simple box that matches cartridge dimensions
+            const shape = new CANNON.Box(new CANNON.Vec3(0.6, 0.7, 0.1));
+            const body = new CANNON.Body({ mass: 1 });
+            body.addShape(shape);
+            body.position.set(cartridge.position.x, cartridge.position.y, cartridge.position.z);
+            // Match the visual rotation
+            body.quaternion.setFromEuler(Math.PI * 1.5, 0, 0);
+            body.linearDamping = 0.5;
+            body.angularDamping = 0.7;
+            world.addBody(body);
+            
+            cartridge.userData.physicsBody = body;
+            cartridges.push(cartridge);
+        });
+    });
+}
+
+function onMouseDown(event: MouseEvent) {
+    if (isPanelOpen()) {
+        return;
+    }
+
+    mouseDownPosition.set(event.clientX, event.clientY);
+    isDragging = false;
+    
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(cartridges);
+
+    if (intersects.length > 0) {
+        selectedCartridge = intersects[0].object as THREE.Mesh;
+        controls.enabled = false; // Disable orbit controls when dragging
+        
+        // Store original Y position before any lifting
+        if (selectedCartridge.userData.originalY === undefined) {
+            selectedCartridge.userData.originalY = selectedCartridge.position.y;
+        }
+        
+        // Set target for smooth transitions
+        targetRotation.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
+        targetLiftHeight = 2;
+        
+        if (selectedCartridge.userData.physicsBody) {
+            selectedCartridge.userData.physicsBody.angularVelocity.set(0, 0, 0);
+        }
+    }
+}
+
+function onMouseUp(event: MouseEvent) {
+    if (isPanelOpen()) {
+        return;
+    }
+
+    // Check if this was a click (not a drag)
+    const dragDistance = Math.sqrt(
+        Math.pow(event.clientX - mouseDownPosition.x, 2) +
+        Math.pow(event.clientY - mouseDownPosition.y, 2)
+    );
+    
+    if (selectedCartridge && dragDistance < 5) {
+        // It's a click, not a drag - show info panel
+        showProjectPanel(selectedCartridge.userData.project);
+    }
+    
+    if (selectedCartridge) {
+        selectedCartridge.userData.originalY = undefined;
+    }
+    targetLiftHeight = 0;
+    selectedCartridge = null;
+    controls.enabled = true; // Re-enable orbit controls
+    isDragging = false;
+}
+
+function onMouseMove(event: MouseEvent) {
+    if (isPanelOpen()) {
+        return;
+    }
+
+    if (selectedCartridge) {
+        isDragging = true;
+        
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        
+        // Create a horizontal plane at the ORIGINAL height (before lifting)
+        // This keeps the cartridge centered under the mouse as it lifts
+        const planeY = selectedCartridge.userData.originalY;
+        const planeNormal = new THREE.Vector3(0, 1, 0); // Horizontal plane
+        const plane = new THREE.Plane(planeNormal, -planeY);
+        const intersectPoint = new THREE.Vector3();
+        raycaster.ray.intersectPlane(plane, intersectPoint);
+        
+        if (intersectPoint) {
+            selectedCartridge.position.x = intersectPoint.x;
+            selectedCartridge.position.z = intersectPoint.z;
+            // Y position is handled in animate() for smooth lifting
+        }
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    // Update physics
+    world.step(1 / 60);
+    
+    // Smooth transitions for selected cartridge
+    if (selectedCartridge && selectedCartridge.userData.originalY !== undefined) {
+        // Smooth rotation interpolation (slerp)
+        selectedCartridge.quaternion.slerp(targetRotation, 0.15);
+        
+        // Smooth position lift - target is originalY + lift height
+        const targetY = selectedCartridge.userData.originalY + targetLiftHeight;
+        const liftDelta = (targetY - selectedCartridge.position.y) * 0.15;
+        selectedCartridge.position.y += liftDelta;
+        
+        // Update physics body
+        if (selectedCartridge.userData.physicsBody) {
+            selectedCartridge.userData.physicsBody.position.copy(selectedCartridge.position);
+            selectedCartridge.userData.physicsBody.quaternion.copy(selectedCartridge.quaternion);
+        }
+    }
+    
+    // Sync Three.js meshes with physics bodies
+    cartridges.forEach(cartridge => {
+        if (cartridge.userData.physicsBody && cartridge !== selectedCartridge) {
+            cartridge.position.copy(cartridge.userData.physicsBody.position);
+            cartridge.quaternion.copy(cartridge.userData.physicsBody.quaternion);
+            
+            // If cartridge falls too low, reset it on the table
+            if (cartridge.position.y < -30) {
+                cartridge.position.set(
+                    (Math.random() - 0.5) * 4,
+                    1,
+                    (Math.random() - 0.5) * 3
+                );
+                cartridge.rotation.set(-Math.PI / 2, 0, 0);
+                cartridge.userData.physicsBody.position.copy(cartridge.position);
+                cartridge.userData.physicsBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+                cartridge.userData.physicsBody.velocity.set(0, 0, 0);
+                cartridge.userData.physicsBody.angularVelocity.set(0, 0, 0);
+            }
+        }
+    });
+    
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+init();
+</script>
 
 <style lang="less">
   main {
@@ -104,6 +637,87 @@ import { ViewTransitions } from 'astro:transitions'
     align-items: center;
     height: 100vh;
     width: 100vw;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+        &.panel-open {
+            #canvas-container {
+                pointer-events: none;
+            }
+        }
+
+    #project-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(20, 20, 20, 0.95);
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(124, 58, 237, 0.5);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      z-index: 1000;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+
+      #close-panel {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: #aaa;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: color 0.2s;
+
+        &:hover {
+          color: #fff;
+        }
+      }
+
+      h2 {
+        margin: 0 0 1rem 0;
+        color: #fff;
+        font-size: 1.8rem;
+      }
+
+      p {
+        color: #ccc;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+      }
+
+      a {
+        display: inline-block;
+        color: rgb(124, 58, 237);
+        text-decoration: none;
+        font-weight: bold;
+        transition: color 0.2s;
+
+        &:hover {
+          color: #da62c4;
+        }
+      }
+    }
+
+        #project-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 900;
+            pointer-events: auto;
+        }
 
     h1 {
       opacity: 0.2;

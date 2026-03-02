@@ -138,6 +138,7 @@ let targetRotation = new THREE.Quaternion();
 let targetLiftHeight = 0;
 let mouseDownPosition = new THREE.Vector2();
 let isDragging = false;
+let activePointerId: number | null = null;
 
 function showProjectPanel(project: any) {
     const panel = document.getElementById('project-panel');
@@ -206,9 +207,10 @@ function init() {
     createCartridges();
     animate();
 
-    window.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mouseup', onMouseUp);
-    window.addEventListener('mousemove', onMouseMove);
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('resize', onWindowResize);
     
     // Setup close button
@@ -500,8 +502,16 @@ function createCartridges() {
     });
 }
 
-function onMouseDown(event: MouseEvent) {
+function onPointerDown(event: PointerEvent) {
     if (isPanelOpen()) {
+        return;
+    }
+
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+        return;
+    }
+
+    if (activePointerId !== null && activePointerId !== event.pointerId) {
         return;
     }
 
@@ -516,7 +526,9 @@ function onMouseDown(event: MouseEvent) {
 
     if (intersects.length > 0) {
         selectedCartridge = intersects[0].object as THREE.Mesh;
+        activePointerId = event.pointerId;
         controls.enabled = false; // Disable orbit controls when dragging
+        renderer.domElement.setPointerCapture(event.pointerId);
         
         // Store original Y position before any lifting
         if (selectedCartridge.userData.originalY === undefined) {
@@ -533,8 +545,12 @@ function onMouseDown(event: MouseEvent) {
     }
 }
 
-function onMouseUp(event: MouseEvent) {
+function onPointerUp(event: PointerEvent) {
     if (isPanelOpen()) {
+        return;
+    }
+
+    if (activePointerId !== null && activePointerId !== event.pointerId) {
         return;
     }
 
@@ -543,8 +559,9 @@ function onMouseUp(event: MouseEvent) {
         Math.pow(event.clientX - mouseDownPosition.x, 2) +
         Math.pow(event.clientY - mouseDownPosition.y, 2)
     );
+    const clickThreshold = event.pointerType === 'touch' ? 12 : 5;
     
-    if (selectedCartridge && dragDistance < 5) {
+    if (selectedCartridge && dragDistance < clickThreshold) {
         // It's a click, not a drag - show info panel
         showProjectPanel(selectedCartridge.userData.project);
     }
@@ -554,12 +571,21 @@ function onMouseUp(event: MouseEvent) {
     }
     targetLiftHeight = 0;
     selectedCartridge = null;
+    activePointerId = null;
     controls.enabled = true; // Re-enable orbit controls
     isDragging = false;
+
+    if (renderer.domElement.hasPointerCapture(event.pointerId)) {
+        renderer.domElement.releasePointerCapture(event.pointerId);
+    }
 }
 
-function onMouseMove(event: MouseEvent) {
+function onPointerMove(event: PointerEvent) {
     if (isPanelOpen()) {
+        return;
+    }
+
+    if (activePointerId !== event.pointerId) {
         return;
     }
 
@@ -657,6 +683,7 @@ init();
       left: 0;
       width: 100%;
       height: 100%;
+            touch-action: none;
     }
 
         &.panel-open {

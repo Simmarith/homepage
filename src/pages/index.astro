@@ -12,11 +12,9 @@ import Mumalab from '../assets/mumalab-logo.png'
 
 import Thingiverse from '../assets/thingiverse.png'
 import GitHub from '../assets/github.svg'
-import { ViewTransitions } from 'astro:transitions'
 ---
 
 <Layout title="Adrian's Stuff.">
-  <ViewTransitions />
   <main>
     <div id="canvas-container"></div>
     
@@ -124,6 +122,7 @@ import VirtualBookingTexture from '../assets/virtualbooking.png';
 import UberhackerTexture from '../assets/uberhacker.png';
 import MumalabTexture from '../assets/mumalab-logo.png';
 import MakertalkTexture from '../assets/makertalk.svg';
+import Lunchtime from '../assets/Lunchtime_logo.png';
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
@@ -279,6 +278,7 @@ function createCartridges() {
     
     // Project data with images and info
     const projects = [
+        { image: Lunchtime.src, title: 'Lunchtime', body: 'A tool to split your lunch bill with friends', href: 'https://lunchtime.simmarith.de/', special: true },
         { image: VimClutchTexture.src, title: 'Vim Clutch', body: 'Using a foot pedal to switch in/out of insert mode in vim', href: 'https://github.com/munichmakerlab/vim-clutch' },
         { image: CableHolderTexture.src, title: 'Prusa Mini Cable Holder', body: 'A quick fix for a quick issue', href: 'https://www.printables.com/model/289090-prusa-mini-usb-cable-holder' },
         { image: KeyboardTexture.src, title: 'Handsoldered Dactyl-Manuform', body: "I've built my own keyboard off of templates from the internet.", href: 'https://wiki.munichmakerlab.de/wiki/Dactyl-Manuform' },

@@ -11,9 +11,9 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.18.0",
+    "astro": "^6.0.8",
     "cannon-es": "^0.20.0",
-    "less": "^4.5.1",
+    "less": "^4.6.4",
     "mqtt": "^5.15.0",
     "three": "^0.183.2"
   },

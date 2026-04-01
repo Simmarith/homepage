@@ -1,0 +1,207 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout title='Prowlarr Search Privacy Policy'>
+  <main class='privacy-shell'>
+    <section class='privacy-card'>
+      <header class='privacy-header'>
+        <p class='eyebrow'>Chrome Extension</p>
+        <h1>Privacy Policy for Prowlarr Search</h1>
+        <p class='updated'>Last Updated: April 1, 2026</p>
+      </header>
+
+      <p>
+        Your privacy is important to us. This Privacy Policy explains how the
+        <strong> Prowlarr Search </strong>
+        Chrome extension handles your data.
+      </p>
+
+      <h2>1. Information Collection and Use</h2>
+      <p>
+        <strong>Prowlarr Search</strong> is designed to be a private and secure
+        tool for searching your own Prowlarr instance.
+      </p>
+      <ul>
+        <li>
+          <strong>Prowlarr Server Data:</strong> The extension requires you to
+          provide the URL and API key of your own Prowlarr server. This
+          information is used solely to communicate with your server to perform
+          searches and retrieve results.
+        </li>
+        <li>
+          <strong>Search Queries:</strong> When you use the extension to search,
+          the search terms are sent directly to
+          <strong> your configured Prowlarr server</strong>.
+        </li>
+        <li>
+          <strong>No Centralized Tracking:</strong> We do not collect, store, or
+          monitor your search queries, the results you receive, or any other
+          usage data. There is no central server that tracks your activity.
+        </li>
+      </ul>
+
+      <h2>2. Data Storage</h2>
+      <ul>
+        <li>
+          <strong>Local Storage:</strong> Your Prowlarr URL, API key, and search
+          preferences (categories, selected indexers) are stored using the
+          <code>chrome.storage.sync</code> API.
+        </li>
+        <li>
+          <strong>Chrome Sync:</strong> If you have Chrome Sync enabled, this
+          data may be synced across your devices by Google to provide a
+          consistent experience. This data is encrypted by Google during transit
+          and at rest according to their privacy standards.
+        </li>
+        <li>
+          <strong>No Third-Party Access:</strong> We do not have access to the
+          data stored in your browser or your Prowlarr server.
+        </li>
+      </ul>
+
+      <h2>3. Data Disclosure</h2>
+      <ul>
+        <li>
+          <strong>Direct Communication:</strong> The extension only sends data to
+          the URL you explicitly provide in the settings. No data is sent to any
+          other third party, including the developer of this extension.
+        </li>
+        <li>
+          <strong>No Sale of Data:</strong> We do not sell, trade, or otherwise
+          transfer your information to outside parties.
+        </li>
+      </ul>
+
+      <h2>4. Permissions</h2>
+      <p>The extension requests the following permissions to function:</p>
+      <ul>
+        <li><code>storage</code>: To save your Prowlarr configuration.</li>
+        <li>
+          <code>contextMenus</code>: To allow you to right-click selected text
+          and search Prowlarr.
+        </li>
+        <li><code>activeTab</code>: To facilitate the display of search results.</li>
+        <li>
+          <strong>Host Permissions:</strong> To allow the extension to make API
+          requests to the Prowlarr server URL you provide.
+        </li>
+      </ul>
+
+      <h2>5. Changes to This Policy</h2>
+      <p>
+        We may update our Privacy Policy from time to time. Any changes will be
+        reflected in the "Last Updated" date at the top of this page.
+      </p>
+
+      <h2>6. Contact Us</h2>
+      <p>
+        If you have any questions about this Privacy Policy, please contact the
+        developer through the Chrome Web Store support page or the project's
+        repository.
+      </p>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .privacy-shell {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: clamp(1.25rem, 2vw + 1rem, 3.5rem);
+    background:
+      radial-gradient(1200px 500px at -5% -15%, rgba(56, 189, 248, 0.14), transparent 50%),
+      radial-gradient(900px 450px at 110% 0%, rgba(244, 63, 94, 0.1), transparent 45%);
+  }
+
+  .privacy-card {
+    width: min(920px, 100%);
+    padding: clamp(1.2rem, 2.1vw + 1rem, 3rem);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    background: linear-gradient(
+      150deg,
+      rgba(26, 26, 26, 0.94),
+      rgba(18, 18, 18, 0.92)
+    );
+    box-shadow:
+      0 14px 40px rgba(0, 0, 0, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(6px);
+  }
+
+  .privacy-header {
+    margin-bottom: 1.1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.72rem;
+    color: #67e8f9;
+    font-weight: 700;
+  }
+
+  h1 {
+    margin: 0.45rem 0 0.35rem;
+    font-size: clamp(1.6rem, 2.3vw + 1rem, 2.45rem);
+    line-height: 1.18;
+    color: #f9fafb;
+  }
+
+  .updated {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 0.95rem;
+  }
+
+  h2 {
+    margin-top: 1.6rem;
+    margin-bottom: 0.55rem;
+    font-size: clamp(1.1rem, 0.6vw + 0.95rem, 1.35rem);
+    color: #e2e8f0;
+  }
+
+  p,
+  li {
+    color: #d1d5db;
+    line-height: 1.72;
+    font-size: clamp(0.98rem, 0.2vw + 0.93rem, 1.06rem);
+  }
+
+  ul {
+    margin-top: 0.35rem;
+    padding-left: 1.25rem;
+  }
+
+  li + li {
+    margin-top: 0.42rem;
+  }
+
+  strong {
+    color: #f1f5f9;
+  }
+
+  code {
+    background: rgba(2, 132, 199, 0.18);
+    border: 1px solid rgba(125, 211, 252, 0.26);
+    border-radius: 6px;
+    padding: 0.1rem 0.36rem;
+    color: #e0f2fe;
+    font-size: 0.93em;
+  }
+
+  @media (max-width: 640px) {
+    .privacy-card {
+      border-radius: 14px;
+    }
+
+    ul {
+      padding-left: 1.05rem;
+    }
+  }
+</style>

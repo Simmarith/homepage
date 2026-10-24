@@ -1,0 +1,67 @@
+<aside class="radio-controls" aria-label="KellerFM radio">
+  <button id="radio-power" type="button" aria-label="Turn on KellerFM radio" aria-pressed="false" aria-describedby="radio-status">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path d="M12 3v9M6.3 5.7a9 9 0 1 0 11.4 0" />
+    </svg>
+  </button>
+  <div class="radio-info">
+    <a href="https://radio.simmarith.de/public/kellerfm" target="_blank" rel="noopener">KellerFM</a>
+    <span id="radio-status" role="status" aria-live="polite">Radio is off</span>
+    <label class="radio-volume">
+      <span>Volume</span>
+      <input id="radio-volume" type="range" min="0" max="100" value="60" aria-label="Radio volume" />
+    </label>
+  </div>
+  <audio id="radio-audio" preload="none"></audio>
+</aside>
+
+<style>
+  .radio-controls {
+    position: fixed;
+    bottom: max(1.25rem, env(safe-area-inset-bottom));
+    left: max(1.25rem, env(safe-area-inset-left));
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.85rem 1.1rem 0.85rem 0.85rem;
+    border: 1px solid #736653;
+    border-radius: 8px;
+    background: #26231eed;
+    box-shadow: 0 4px 16px #0005;
+    color: #ece2d0;
+    text-align: left;
+  }
+
+  #radio-power {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border: 2px solid #a69b88;
+    border-radius: 50%;
+    background: #3b362e;
+    color: #e1d6c2;
+    cursor: pointer;
+  }
+
+  #radio-power:hover { background: #50483b; }
+  #radio-power[aria-pressed='true'] { color: #b7edb1; border-color: #b7edb1; }
+  #radio-power:focus-visible, input:focus-visible, a:focus-visible {
+    outline: 3px solid #b7edb1;
+    outline-offset: 4px;
+  }
+
+  .radio-info { display: grid; gap: 0.2rem; min-width: 160px; }
+  a { width: fit-content; color: #ece2d0; font-weight: 650; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  #radio-status { font-size: 0.75rem; color: #c6bdaa; max-width: 205px; }
+  .radio-volume { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.25rem; }
+  .radio-volume span { font-size: 0.7rem; color: #c6bdaa; }
+  input { width: 105px; height: 18px; margin: 0; accent-color: #b7edb1; cursor: pointer; }
+
+  @media (max-width: 480px) {
+    .radio-controls { left: max(0.75rem, env(safe-area-inset-left)); bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+  }
+</style>

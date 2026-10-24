@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro'
 import Card from '../components/Card.astro'
+import Radio from '../components/Radio.astro'
 import VimClutch from '../assets/vim-clutch.jpg'
 import Keyboard from '../assets/keyboard.jpeg'
 import CableHolder from '../assets/cable-holder.webp'
@@ -17,6 +18,7 @@ import GitHub from '../assets/github.svg'
 <Layout title="Adrian's Stuff.">
   <main>
     <div id="canvas-container"></div>
+    <Radio />
     
         <!-- Project Info Panel -->
         <div id="project-overlay" style="display: none;"></div>
@@ -112,6 +114,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import * as CANNON from 'cannon-es';
+import { createRadio } from '../assets/Radio';
 import VimClutchTexture from '../assets/vim-clutch.jpg';
 import CableHolderTexture from '../assets/cable-holder.webp';
 import KeyboardTexture from '../assets/keyboard.jpeg';
@@ -139,6 +142,9 @@ let mouseDownPosition = new THREE.Vector2();
 let isDragging = false;
 let activePointerId: number | null = null;
 let activePointerType = '';
+let radio: ReturnType<typeof createRadio>;
+let radioPointerId: number | null = null;
+let cameraFramingScale = 1;
 
 function showProjectPanel(project: any) {
     const panel = document.getElementById('project-panel');
@@ -197,6 +203,8 @@ function init() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     camera.position.set(0, 8, 2);
+    cameraFramingScale = Math.max(1, 1 / camera.aspect);
+    camera.position.multiplyScalar(cameraFramingScale);
     camera.lookAt(0, -1, 0);
 
     // Setup physics world
@@ -205,6 +213,7 @@ function init() {
     world.broadphase = new CANNON.NaiveBroadphase();
 
     createTable();
+    radio = createRadio(scene, world);
     createCartridges();
     animate();
 
@@ -228,6 +237,10 @@ function init() {
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
+    // Keep the whole tabletop, including its radio, visible on portrait screens.
+    const framingScale = Math.max(1, 1 / camera.aspect);
+    camera.position.sub(controls.target).multiplyScalar(framingScale / cameraFramingScale).add(controls.target);
+    cameraFramingScale = framingScale;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
@@ -476,11 +489,8 @@ function createCartridges() {
             
             const cartridge = new THREE.Mesh(geometry, materials);
             
-            cartridge.position.set(
-                (Math.random() - 0.5) * 8,
-                0.2 + i * 0.3,
-                (Math.random() - 0.5) * 6
-            );
+            const position = getCartridgePosition();
+            cartridge.position.set(position.x, 0.2 + i * 0.3, position.z);
             // Rotate to lay flat on the table
             cartridge.rotateX(Math.PI / 2);
             cartridge.rotateZ(Math.PI);
@@ -502,6 +512,17 @@ function createCartridges() {
             cartridges.push(cartridge);
         });
     });
+}
+
+function getCartridgePosition() {
+    let x: number;
+    let z: number;
+    // Leave room around the receiver, including the cartridge's own width.
+    do {
+        x = (Math.random() - 0.5) * 8;
+        z = (Math.random() - 0.5) * 6;
+    } while (x < -1.6 && z < -0.3);
+    return { x, z };
 }
 
 function onPointerDown(event: PointerEvent) {
@@ -528,7 +549,17 @@ function onPointerDown(event: PointerEvent) {
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
+    const radioHit = raycaster.intersectObject(radio.object, true)[0];
     const intersects = raycaster.intersectObjects(cartridges);
+
+    if (radioHit && (!intersects[0] || radioHit.distance < intersects[0].distance)) {
+        radioPointerId = event.pointerId;
+        activePointerId = event.pointerId;
+        activePointerType = event.pointerType;
+        controls.enabled = false;
+        renderer.domElement.setPointerCapture(event.pointerId);
+        return;
+    }
 
     if (intersects.length > 0) {
         selectedCartridge = intersects[0].object as THREE.Mesh;
@@ -567,6 +598,11 @@ function onPointerUp(event: PointerEvent) {
         Math.pow(event.clientY - mouseDownPosition.y, 2)
     );
     const clickThreshold = activePointerType === 'touch' ? 24 : 5;
+
+    if (radioPointerId === event.pointerId) {
+        if (dragDistance < clickThreshold) radio.toggle();
+        radioPointerId = null;
+    }
     
     if (selectedCartridge && !isDragging && dragDistance < clickThreshold) {
         // It's a click, not a drag - show info panel
@@ -597,6 +633,7 @@ function onPointerCancel(event: PointerEvent) {
         selectedCartridge.userData.originalY = undefined;
     }
     targetLiftHeight = 0;
+    radioPointerId = null;
     selectedCartridge = null;
     activePointerId = null;
     activePointerType = '';
@@ -607,6 +644,15 @@ function onPointerCancel(event: PointerEvent) {
 function onPointerMove(event: PointerEvent) {
     if (isPanelOpen()) {
         return;
+    }
+
+    if (activePointerId === null && event.target === renderer.domElement) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const radioHit = raycaster.intersectObject(radio.object, true)[0];
+        const cartridgeHit = raycaster.intersectObjects(cartridges)[0];
+        renderer.domElement.style.cursor = radioHit && (!cartridgeHit || radioHit.distance < cartridgeHit.distance) ? 'pointer' : '';
     }
 
     if (activePointerId !== event.pointerId) {
@@ -679,11 +725,8 @@ function animate() {
             
             // If cartridge falls too low, reset it on the table
             if (cartridge.position.y < -30) {
-                cartridge.position.set(
-                    (Math.random() - 0.5) * 4,
-                    1,
-                    (Math.random() - 0.5) * 3
-                );
+                const position = getCartridgePosition();
+                cartridge.position.set(position.x, 1, position.z);
                 cartridge.rotation.set(-Math.PI / 2, 0, 0);
                 cartridge.userData.physicsBody.position.copy(cartridge.position);
                 cartridge.userData.physicsBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);

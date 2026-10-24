@@ -135,7 +135,7 @@ let world: CANNON.World;
 let cartridges: THREE.Mesh[] = [];
 let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
-let selectedCartridge: THREE.Mesh | null = null;
+let selectedObject: THREE.Object3D | null = null;
 let targetRotation = new THREE.Quaternion();
 let targetLiftHeight = 0;
 let mouseDownPosition = new THREE.Vector2();
@@ -143,7 +143,9 @@ let isDragging = false;
 let activePointerId: number | null = null;
 let activePointerType = '';
 let radio: ReturnType<typeof createRadio>;
-let radioPointerId: number | null = null;
+let pressedPowerButton = false;
+let dragVelocity = new THREE.Vector3();
+let lastDragTime = 0;
 let cameraFramingScale = 1;
 
 function showProjectPanel(project: any) {
@@ -525,173 +527,122 @@ function getCartridgePosition() {
     return { x, z };
 }
 
-function onPointerDown(event: PointerEvent) {
-    if (isPanelOpen()) {
-        return;
-    }
-
-    if (event.pointerType === 'mouse' && event.button !== 0) {
-        return;
-    }
-
-    if (activePointerId !== null && activePointerId !== event.pointerId) {
-        return;
-    }
-
-    if (event.pointerType === 'touch') {
-        event.preventDefault();
-    }
-
-    mouseDownPosition.set(event.clientX, event.clientY);
-    isDragging = false;
-    
+function pointerHit(event: PointerEvent) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
     raycaster.setFromCamera(mouse, camera);
-    const radioHit = raycaster.intersectObject(radio.object, true)[0];
-    const intersects = raycaster.intersectObjects(cartridges);
-
-    if (radioHit && (!intersects[0] || radioHit.distance < intersects[0].distance)) {
-        radioPointerId = event.pointerId;
-        activePointerId = event.pointerId;
-        activePointerType = event.pointerType;
-        controls.enabled = false;
-        renderer.domElement.setPointerCapture(event.pointerId);
-        return;
-    }
-
-    if (intersects.length > 0) {
-        selectedCartridge = intersects[0].object as THREE.Mesh;
-        activePointerId = event.pointerId;
-        activePointerType = event.pointerType;
-        controls.enabled = false; // Disable orbit controls when dragging
-        renderer.domElement.setPointerCapture(event.pointerId);
-        
-        // Store original Y position before any lifting
-        if (selectedCartridge.userData.originalY === undefined) {
-            selectedCartridge.userData.originalY = selectedCartridge.position.y;
-        }
-        
-        // Set target for smooth transitions
-        targetRotation.setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0));
-        targetLiftHeight = 2;
-        
-        if (selectedCartridge.userData.physicsBody) {
-            selectedCartridge.userData.physicsBody.angularVelocity.set(0, 0, 0);
-        }
-    }
+    return raycaster.intersectObjects([...cartridges, radio.object], true)[0];
 }
 
-function onPointerUp(event: PointerEvent) {
-    if (isPanelOpen()) {
-        return;
-    }
+function onPointerDown(event: PointerEvent) {
+    if (isPanelOpen() || activePointerId !== null) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
 
-    if (activePointerId !== null && activePointerId !== event.pointerId) {
-        return;
-    }
-
-    // Check if this was a click (not a drag)
-    const dragDistance = Math.sqrt(
-        Math.pow(event.clientX - mouseDownPosition.x, 2) +
-        Math.pow(event.clientY - mouseDownPosition.y, 2)
-    );
-    const clickThreshold = activePointerType === 'touch' ? 24 : 5;
-
-    if (radioPointerId === event.pointerId) {
-        if (dragDistance < clickThreshold) radio.toggle();
-        radioPointerId = null;
-    }
-    
-    if (selectedCartridge && !isDragging && dragDistance < clickThreshold) {
-        // It's a click, not a drag - show info panel
-        showProjectPanel(selectedCartridge.userData.project);
-    }
-    
-    if (selectedCartridge) {
-        selectedCartridge.userData.originalY = undefined;
-    }
-    targetLiftHeight = 0;
-    selectedCartridge = null;
-    activePointerId = null;
-    activePointerType = '';
-    controls.enabled = true; // Re-enable orbit controls
+    const hit = pointerHit(event);
+    if (!hit) return;
+    if (event.pointerType === 'touch') event.preventDefault();
+    mouseDownPosition.set(event.clientX, event.clientY);
     isDragging = false;
+    activePointerId = event.pointerId;
+    activePointerType = event.pointerType;
+    controls.enabled = false;
+    renderer.domElement.setPointerCapture(event.pointerId);
+    pressedPowerButton = radio.isPowerButton(hit.object);
+    if (pressedPowerButton) return;
 
-    if (renderer.domElement.hasPointerCapture(event.pointerId)) {
-        renderer.domElement.releasePointerCapture(event.pointerId);
+    // A hit on any child of the radio picks up its complete physics body.
+    selectedObject = hit.object;
+    while (!selectedObject.userData.physicsBody && selectedObject.parent) {
+        selectedObject = selectedObject.parent;
     }
+    selectedObject.userData.originalY = selectedObject.position.y;
+    targetRotation.setFromEuler(new THREE.Euler(selectedObject === radio.object ? -Math.PI / 2 + 0.22 : -Math.PI / 2, 0, 0));
+    targetLiftHeight = 0;
+    dragVelocity.set(0, 0, 0);
+    lastDragTime = performance.now();
+    const body = selectedObject.userData.physicsBody as CANNON.Body;
+    body.type = CANNON.Body.KINEMATIC;
+    body.velocity.setZero();
+    body.angularVelocity.setZero();
+    body.wakeUp();
 }
 
-function onPointerCancel(event: PointerEvent) {
-    if (activePointerId !== null && activePointerId !== event.pointerId) {
-        return;
-    }
-
-    if (selectedCartridge) {
-        selectedCartridge.userData.originalY = undefined;
+function releasePointer(pointerId: number, throwObject: boolean) {
+    if (selectedObject) {
+        const body = selectedObject.userData.physicsBody as CANNON.Body;
+        body.type = CANNON.Body.DYNAMIC;
+        if (throwObject && isDragging) {
+            // A quick release keeps momentum; holding still before release drops it.
+            dragVelocity.multiplyScalar(Math.exp(-(performance.now() - lastDragTime) / 120));
+            body.velocity.set(dragVelocity.x, 0, dragVelocity.z);
+            body.angularVelocity.set(dragVelocity.z * 0.12, 0, -dragVelocity.x * 0.12);
+        } else {
+            body.velocity.setZero();
+            body.angularVelocity.setZero();
+        }
+        body.wakeUp();
+        selectedObject.userData.originalY = undefined;
     }
     targetLiftHeight = 0;
-    radioPointerId = null;
-    selectedCartridge = null;
+    selectedObject = null;
+    pressedPowerButton = false;
     activePointerId = null;
     activePointerType = '';
     controls.enabled = true;
+    renderer.domElement.style.cursor = '';
     isDragging = false;
+    if (renderer.domElement.hasPointerCapture(pointerId)) renderer.domElement.releasePointerCapture(pointerId);
+}
+
+function onPointerUp(event: PointerEvent) {
+    if (activePointerId !== event.pointerId) return;
+    const distance = mouseDownPosition.distanceTo(new THREE.Vector2(event.clientX, event.clientY));
+    const clickThreshold = activePointerType === 'touch' ? 24 : 5;
+    const hit = pointerHit(event);
+    const shouldToggle = pressedPowerButton && !isDragging && distance < clickThreshold && !!hit && radio.isPowerButton(hit.object);
+    const project = selectedObject?.userData.project;
+    const shouldOpenProject = project && !isDragging && distance < clickThreshold;
+    releasePointer(event.pointerId, true);
+    if (shouldToggle) radio.toggle();
+    if (shouldOpenProject) showProjectPanel(project);
+}
+
+function onPointerCancel(event: PointerEvent) {
+    if (activePointerId === event.pointerId) releasePointer(event.pointerId, false);
 }
 
 function onPointerMove(event: PointerEvent) {
-    if (isPanelOpen()) {
-        return;
-    }
-
+    if (isPanelOpen()) return;
     if (activePointerId === null && event.target === renderer.domElement) {
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const radioHit = raycaster.intersectObject(radio.object, true)[0];
-        const cartridgeHit = raycaster.intersectObjects(cartridges)[0];
-        renderer.domElement.style.cursor = radioHit && (!cartridgeHit || radioHit.distance < cartridgeHit.distance) ? 'pointer' : '';
-    }
-
-    if (activePointerId !== event.pointerId) {
+        const hit = pointerHit(event);
+        renderer.domElement.style.cursor = hit ? radio.isPowerButton(hit.object) ? 'pointer' : 'grab' : '';
         return;
     }
-
-    if (selectedCartridge) {
-        const dragDistance = Math.sqrt(
-            Math.pow(event.clientX - mouseDownPosition.x, 2) +
-            Math.pow(event.clientY - mouseDownPosition.y, 2)
-        );
-        const dragStartThreshold = activePointerType === 'touch' ? 10 : 3;
-        if (!isDragging && dragDistance > dragStartThreshold) {
-            isDragging = true;
-        }
-
-        if (!isDragging) {
-            return;
-        }
-        
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-        raycaster.setFromCamera(mouse, camera);
-        
-        // Create a horizontal plane at the ORIGINAL height (before lifting)
-        // This keeps the cartridge centered under the mouse as it lifts
-        const planeY = selectedCartridge.userData.originalY;
-        const planeNormal = new THREE.Vector3(0, 1, 0); // Horizontal plane
-        const plane = new THREE.Plane(planeNormal, -planeY);
-        const intersectPoint = new THREE.Vector3();
-        raycaster.ray.intersectPlane(plane, intersectPoint);
-        
-        if (intersectPoint) {
-            selectedCartridge.position.x = intersectPoint.x;
-            selectedCartridge.position.z = intersectPoint.z;
-            // Y position is handled in animate() for smooth lifting
-        }
-    }
+    if (activePointerId !== event.pointerId) return;
+    const distance = mouseDownPosition.distanceTo(new THREE.Vector2(event.clientX, event.clientY));
+    if (distance > (activePointerType === 'touch' ? 10 : 3)) isDragging = true;
+    if (!selectedObject || !isDragging) return;
+    targetLiftHeight = 2;
+    renderer.domElement.style.cursor = 'grabbing';
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -selectedObject.userData.originalY);
+    const point = raycaster.ray.intersectPlane(plane, new THREE.Vector3());
+    if (!point) return;
+    const now = performance.now();
+    const elapsed = Math.max((now - lastDragTime) / 1000, 1 / 120);
+    const velocity = new THREE.Vector3(point.x - selectedObject.position.x, 0, point.z - selectedObject.position.z).divideScalar(elapsed);
+    velocity.clampLength(0, 12);
+    dragVelocity.lerp(velocity, 0.65);
+    lastDragTime = now;
+    selectedObject.position.x = point.x;
+    selectedObject.position.z = point.z;
+    // Keep the physics body current even if pointerup precedes the next frame.
+    const body = selectedObject.userData.physicsBody as CANNON.Body;
+    body.position.x = point.x;
+    body.position.z = point.z;
+    body.aabbNeedsUpdate = true;
 }
 
 function animate() {
@@ -701,25 +652,26 @@ function animate() {
     world.step(1 / 60);
     
     // Smooth transitions for selected cartridge
-    if (selectedCartridge && selectedCartridge.userData.originalY !== undefined) {
+    if (selectedObject && selectedObject.userData.originalY !== undefined) {
         // Smooth rotation interpolation (slerp)
-        selectedCartridge.quaternion.slerp(targetRotation, 0.15);
+        if (isDragging) selectedObject.quaternion.slerp(targetRotation, 0.15);
         
         // Smooth position lift - target is originalY + lift height
-        const targetY = selectedCartridge.userData.originalY + targetLiftHeight;
-        const liftDelta = (targetY - selectedCartridge.position.y) * 0.15;
-        selectedCartridge.position.y += liftDelta;
+        const targetY = selectedObject.userData.originalY + targetLiftHeight;
+        const liftDelta = (targetY - selectedObject.position.y) * 0.15;
+        selectedObject.position.y += liftDelta;
         
         // Update physics body
-        if (selectedCartridge.userData.physicsBody) {
-            selectedCartridge.userData.physicsBody.position.copy(selectedCartridge.position);
-            selectedCartridge.userData.physicsBody.quaternion.copy(selectedCartridge.quaternion);
+        if (selectedObject.userData.physicsBody) {
+            selectedObject.userData.physicsBody.position.copy(selectedObject.position);
+            selectedObject.userData.physicsBody.quaternion.copy(selectedObject.quaternion);
+            selectedObject.userData.physicsBody.aabbNeedsUpdate = true;
         }
     }
     
     // Sync Three.js meshes with physics bodies
     cartridges.forEach(cartridge => {
-        if (cartridge.userData.physicsBody && cartridge !== selectedCartridge) {
+        if (cartridge.userData.physicsBody && cartridge !== selectedObject) {
             cartridge.position.copy(cartridge.userData.physicsBody.position);
             cartridge.quaternion.copy(cartridge.userData.physicsBody.quaternion);
             
@@ -736,6 +688,7 @@ function animate() {
         }
     });
     
+    radio.update();
     controls.update();
     renderer.render(scene, camera);
 }

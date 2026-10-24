@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import { createRadioAudio } from './RadioAudio';
 
 const STREAM_URL = 'https://radio.simmarith.de/listen/kellerfm/radio.mp3';
 type RadioState = 'off' | 'connecting' | 'playing' | 'error';
@@ -9,6 +10,7 @@ export function createRadio(scene: THREE.Scene, world: CANNON.World) {
   const power = document.getElementById('radio-power') as HTMLButtonElement;
   const volume = document.getElementById('radio-volume') as HTMLInputElement;
   const status = document.getElementById('radio-status')!;
+  const sound = createRadioAudio(audio);
   const radio = new THREE.Group();
   radio.name = 'KellerFM radio';
   radio.position.set(-3.7, -1.2, -2.1);
@@ -84,13 +86,17 @@ export function createRadio(scene: THREE.Scene, world: CANNON.World) {
   const led = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), ledMaterial);
   led.position.set(0.94, -0.35, 0.57);
   radio.add(led);
+  const powerButtons = new Set<THREE.Object3D>([powerKnob, powerMark, led]);
   scene.add(radio);
 
   // Give the receiver a solid body in the tabletop physics world.
-  const body = new CANNON.Body({ mass: 0 });
+  const body = new CANNON.Body({ mass: 2 });
   body.addShape(new CANNON.Box(new CANNON.Vec3(1.325, 0.725, 0.375)));
   body.position.set(radio.position.x, radio.position.y, radio.position.z);
   body.quaternion.set(radio.quaternion.x, radio.quaternion.y, radio.quaternion.z, radio.quaternion.w);
+  body.linearDamping = 0.5;
+  body.angularDamping = 0.7;
+  radio.userData.physicsBody = body;
   world.addBody(body);
 
   let state: RadioState = 'off';
@@ -147,13 +153,13 @@ export function createRadio(scene: THREE.Scene, world: CANNON.World) {
     render('connecting');
     audio.src = STREAM_URL;
     // Keep play() within the click gesture so mobile browsers allow audio.
-    void audio.play().catch(() => {
+    void Promise.all([sound.activate(), audio.play()]).catch(() => {
       if (currentAttempt === attempt) fail();
     });
   }
 
-  audio.volume = Number(volume.value) / 100;
-  volume.addEventListener('input', () => { audio.volume = Number(volume.value) / 100; });
+  sound.setVolume(Number(volume.value) / 100);
+  volume.addEventListener('input', () => { sound.setVolume(Number(volume.value) / 100); });
   power.addEventListener('click', toggle);
   audio.addEventListener('playing', () => { if (isOn()) render('playing'); });
   audio.addEventListener('waiting', () => { if (isOn()) render('connecting'); });
@@ -166,5 +172,19 @@ export function createRadio(scene: THREE.Scene, world: CANNON.World) {
   });
   render('off');
 
-  return { object: radio, toggle };
+  function update() {
+    // Match the cartridges' recovery after falling out of the scene.
+    if (body.position.y < -30) {
+      body.position.set(-3.7, 1, -2.1);
+      body.quaternion.setFromEuler(-Math.PI / 2 + 0.22, 0, 0);
+      body.velocity.setZero();
+      body.angularVelocity.setZero();
+      body.wakeUp();
+    }
+    radio.position.set(body.position.x, body.position.y, body.position.z);
+    radio.quaternion.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
+    sound.update(body.position);
+  }
+
+  return { object: radio, body, toggle, update, isPowerButton: (object: THREE.Object3D) => powerButtons.has(object) };
 }

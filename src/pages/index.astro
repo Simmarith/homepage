@@ -15,7 +15,7 @@ import Thingiverse from '../assets/thingiverse.png'
 import GitHub from '../assets/github.svg'
 ---
 
-<Layout title="Adrian's Stuff.">
+<Layout title="Adrian's stuff.">
   <main>
     <div id="canvas-container"></div>
     <header class="scene-intro">
@@ -23,37 +23,19 @@ import GitHub from '../assets/github.svg'
       <p>Small builds, side projects, and experiments.</p>
     </header>
     <p class="scene-hint">
-      <span class="mouse-hint">Pick a cartridge to explore. Drag to move; scroll to zoom.</span>
-      <span class="touch-hint">Tap a cartridge to explore. Drag to move; pinch to zoom.</span>
+      <span class="mouse-hint">Click a cartridge to load. Or drag it into the glowing console slot.</span>
+      <span class="touch-hint">Tap a cartridge to load. Or drag it into the glowing console slot.</span>
     </p>
     <Radio />
     
-    <div id="project-overlay" style="display: none;"></div>
-    <div id="project-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" aria-describedby="panel-body" tabindex="-1" style="display: none;">
-      <button id="close-panel" type="button" aria-label="Close project">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-          <path d="m6 6 12 12M18 6 6 18" />
-        </svg>
-      </button>
-      <div class="panel-artwork">
-        <img id="panel-image" alt="" decoding="async" />
-      </div>
-      <div class="panel-content">
-        <div>
-          <h2 id="panel-title"></h2>
-          <p id="panel-body"></p>
-        </div>
-        <div class="panel-action">
-          <a id="panel-link" href="#" target="_blank" rel="noopener">
-            View project
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M14 3h7v7M21 3l-9 9M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5" />
-            </svg>
-            <span class="visually-hidden">(opens in a new tab)</span>
-          </a>
-          <span id="panel-destination"></span>
-        </div>
-      </div>
+    <p id="slot-hint" role="status" hidden>Release to insert cartridge</p>
+    <div id="project-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" aria-describedby="panel-body" tabindex="-1" hidden>
+      <h2 id="panel-title" class="visually-hidden"></h2>
+      <p id="panel-body" class="visually-hidden"></p>
+      <a id="panel-link" href="#" target="_blank" rel="noopener" aria-label="View project (opens in a new tab)">
+        <span class="visually-hidden">View project (opens in a new tab)</span>
+      </a>
+      <button id="close-panel" type="button">Move back from the screen</button>
     </div>
     
     <div class="old-cards" style="display: none;">
@@ -141,6 +123,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as CANNON from 'cannon-es';
 import { createRadio } from '../assets/Radio';
+import { createRetroConsole } from '../assets/RetroConsole';
 import { createRoom, TABLE_TOP, FLOOR_HEIGHT } from '../assets/Room';
 import { createCartridgeFactory, CARTRIDGE_HALF_EXTENTS, type CartridgeProject } from '../assets/Cartridge';
 import VimClutchTexture from '../assets/vim-clutch.jpg';
@@ -177,55 +160,159 @@ let lastDragTime = 0;
 let cameraFramingScale = 1;
 let lastFrameTime = performance.now();
 
-function showProjectPanel(project: CartridgeProject) {
-    const panel = document.getElementById('project-panel');
-    const overlay = document.getElementById('project-overlay');
-    const main = document.querySelector('main');
-    const title = document.getElementById('panel-title');
-    const body = document.getElementById('panel-body');
-    const link = document.getElementById('panel-link') as HTMLAnchorElement;
-    const image = document.getElementById('panel-image') as HTMLImageElement;
-    const destination = document.getElementById('panel-destination');
-    
-    if (panel && overlay && title && body && link) {
-        title.textContent = project.title;
-        body.textContent = project.body;
-        link.href = project.href;
-        image.src = project.image;
-        image.alt = `Artwork for ${project.title}`;
-        if (destination) {
-            destination.textContent = project.href.startsWith('/')
-                ? 'More about this project'
-                : new URL(project.href).hostname.replace(/^www\./, '');
-        }
-        panel.style.display = 'grid';
-        overlay.style.display = 'block';
-        panel.focus();
-        if (main) {
-            main.classList.add('panel-open');
-        }
-    }
+type ViewMode = 'table' | 'inserting' | 'screen' | 'returning';
+let viewMode: ViewMode = 'table';
+let consoleStation: ReturnType<typeof createRetroConsole>;
+let slotReady = false;
+let loadedCartridge: THREE.Object3D | null = null;
+let motionStart = 0;
+let cartridgeStart = new THREE.Vector3();
+let cartridgeStartRotation = new THREE.Quaternion();
+let cartridgeHome = new THREE.Vector3();
+let cartridgeHomeRotation = new THREE.Quaternion();
+let cameraStart = new THREE.Vector3();
+let cameraTargetStart = new THREE.Vector3();
+const defaultTarget = new THREE.Vector3(0, -2, 0);
+const uprightRotation = new THREE.Quaternion();
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const panel = document.getElementById('project-panel')!;
+const panelLink = document.getElementById('panel-link') as HTMLAnchorElement;
+const slotHint = document.getElementById('slot-hint')!;
+
+function defaultCameraPosition() {
+    return new THREE.Vector3(7.8, 9.5, 13.5).sub(defaultTarget).multiplyScalar(Math.max(1, 0.95 / camera.aspect)).add(defaultTarget);
+}
+
+function screenCameraPosition() {
+    const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+    const distance = Math.max(3.7, consoleStation.screenWidth / (2 * Math.tan(verticalFov / 2) * camera.aspect) * 1.2);
+    return consoleStation.screenCenter.clone().add(new THREE.Vector3(0, 0, distance));
+}
+
+function insertCartridge(cartridge: THREE.Object3D) {
+    if (viewMode !== 'table') return;
+    loadedCartridge = cartridge;
+    cartridgeStart.copy(cartridge.position);
+    cartridgeStartRotation.copy(cartridge.quaternion);
+    cartridgeHome.copy(cartridge.userData.pickupPosition ?? cartridge.position);
+    cartridgeHomeRotation.copy(cartridge.userData.pickupRotation ?? cartridge.quaternion);
+    const body = cartridge.userData.physicsBody as CANNON.Body;
+    body.type = CANNON.Body.KINEMATIC;
+    body.collisionResponse = false;
+    body.velocity.setZero();
+    body.angularVelocity.setZero();
+    body.wakeUp();
+    cameraStart.copy(camera.position);
+    cameraTargetStart.copy(controls.target);
+    controls.enabled = false;
+    viewMode = 'inserting';
+    motionStart = performance.now();
+    consoleStation.setSlotGlow(true, true);
+    slotHint.hidden = true;
+    document.querySelector('main')?.classList.add('screen-open');
+    const project = cartridge.userData.project as CartridgeProject;
+    document.getElementById('panel-title')!.textContent = project.title;
+    document.getElementById('panel-body')!.textContent = project.body;
+    panelLink.href = project.href;
+    panelLink.setAttribute('aria-label', `View ${project.title} (opens in a new tab)`);
 }
 
 function closePanel() {
-    const panel = document.getElementById('project-panel');
-    const overlay = document.getElementById('project-overlay');
-    const main = document.querySelector('main');
-    if (panel) {
-        panel.style.display = 'none';
-    }
-    if (overlay) {
-        overlay.style.display = 'none';
-    }
-    if (main) {
-        main.classList.remove('panel-open');
-    }
-    if (renderer) renderer.domElement.focus({ preventScroll: true });
+    if (viewMode !== 'screen') return;
+    panel.hidden = true;
+    viewMode = 'returning';
+    motionStart = performance.now();
+    cameraStart.copy(camera.position);
+    cameraTargetStart.copy(consoleStation.screenCenter);
+    consoleStation.setProject(null);
+    renderer.domElement.focus({ preventScroll: true });
 }
 
 function isPanelOpen() {
-    const main = document.querySelector('main');
-    return !!main && main.classList.contains('panel-open');
+    return viewMode !== 'table';
+}
+
+function positionScreenLink() {
+    const topLeft = consoleStation.screenPoint(415, 520).project(camera);
+    const bottomRight = consoleStation.screenPoint(963, 628).project(camera);
+    panelLink.style.left = `${(topLeft.x + 1) * window.innerWidth / 2}px`;
+    panelLink.style.top = `${(1 - topLeft.y) * window.innerHeight / 2}px`;
+    panelLink.style.width = `${(bottomRight.x - topLeft.x) * window.innerWidth / 2}px`;
+    panelLink.style.height = `${(topLeft.y - bottomRight.y) * window.innerHeight / 2}px`;
+}
+
+function updateConsoleView(now: number) {
+    if (viewMode === 'table' || !loadedCartridge) return;
+    const elapsed = (now - motionStart) / 1000;
+    const duration = reducedMotion.matches ? 0.01 : viewMode === 'returning' ? 1.2 : 1.9;
+    const progress = Math.min(1, elapsed / duration);
+    const smooth = (value: number) => {
+        const t = THREE.MathUtils.clamp(value, 0, 1);
+        return t * t * (3 - 2 * t);
+    };
+    const slot = consoleStation.slotPosition;
+    const aboveSlot = slot.clone().add(new THREE.Vector3(0, 1.25, 0));
+    if (viewMode === 'inserting') {
+        const align = smooth(progress / 0.36);
+        loadedCartridge.position.lerpVectors(cartridgeStart, aboveSlot, align);
+        loadedCartridge.quaternion.slerpQuaternions(cartridgeStartRotation, uprightRotation, align);
+        if (progress > 0.36) loadedCartridge.position.lerpVectors(aboveSlot, slot, smooth((progress - 0.36) / 0.16));
+        const approach = smooth((progress - 0.4) / 0.6);
+        camera.position.lerpVectors(cameraStart, screenCameraPosition(), approach);
+        controls.target.lerpVectors(cameraTargetStart, consoleStation.screenCenter, approach);
+        if (progress >= 0.52 && !loadedCartridge.userData.screenLoaded) {
+            loadedCartridge.userData.screenLoaded = true;
+            consoleStation.setProject(loadedCartridge.userData.project);
+            consoleStation.setSlotGlow(false);
+        }
+        if (progress === 1) {
+            viewMode = 'screen';
+            panel.hidden = false;
+            document.getElementById('close-panel')!.focus({ preventScroll: true });
+        }
+    } else if (viewMode === 'returning') {
+        if (progress < 0.3) {
+            loadedCartridge.position.lerpVectors(slot, aboveSlot, smooth(progress / 0.3));
+        } else {
+            const eject = smooth((progress - 0.3) / 0.7);
+            loadedCartridge.position.lerpVectors(aboveSlot, cartridgeHome, eject);
+            loadedCartridge.quaternion.slerpQuaternions(uprightRotation, cartridgeHomeRotation, eject);
+        }
+        camera.position.lerpVectors(cameraStart, defaultCameraPosition(), smooth(progress));
+        controls.target.lerpVectors(cameraTargetStart, defaultTarget, smooth(progress));
+        if (progress === 1) {
+            const body = loadedCartridge.userData.physicsBody as CANNON.Body;
+            body.position.set(cartridgeHome.x, cartridgeHome.y, cartridgeHome.z);
+            body.quaternion.set(cartridgeHomeRotation.x, cartridgeHomeRotation.y, cartridgeHomeRotation.z, cartridgeHomeRotation.w);
+            body.aabbNeedsUpdate = true;
+            body.type = CANNON.Body.DYNAMIC;
+            body.collisionResponse = true;
+            body.wakeUp();
+            loadedCartridge.userData.screenLoaded = false;
+            loadedCartridge = null;
+            viewMode = 'table';
+            document.querySelector('main')?.classList.remove('screen-open');
+            // Clear OrbitControls' remaining damping before restoring user input.
+            controls.enableDamping = false;
+            controls.update();
+            controls.enableDamping = true;
+            controls.enabled = true;
+        }
+    } else {
+        camera.position.copy(screenCameraPosition());
+        controls.target.copy(consoleStation.screenCenter);
+    }
+    if (loadedCartridge) {
+        const body = loadedCartridge.userData.physicsBody as CANNON.Body;
+        const position = loadedCartridge.position;
+        const rotation = loadedCartridge.quaternion;
+        body.position.set(position.x, position.y, position.z);
+        body.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+        body.aabbNeedsUpdate = true;
+    }
+    camera.lookAt(controls.target);
+    camera.updateMatrixWorld();
+    if (viewMode === 'screen') positionScreenLink();
 }
 
 function init() {
@@ -275,10 +362,11 @@ function init() {
 
     createRoom(scene, world, renderer);
     radio = createRadio(scene, world);
+    consoleStation = createRetroConsole(scene, world);
     createCartridges();
     animate();
 
-    renderer.domElement.addEventListener('pointerdown', onPointerDown);
+    renderer.domElement.addEventListener('pointerdown', onPointerDown, true);
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerCancel);
     window.addEventListener('pointermove', onPointerMove);
@@ -290,17 +378,16 @@ function init() {
         closeButton.addEventListener('click', closePanel);
     }
 
-    const overlay = document.getElementById('project-overlay');
-    if (overlay) {
-        overlay.addEventListener('click', closePanel);
-    }
     window.addEventListener('keydown', event => {
-        if (!isPanelOpen()) return;
+        if (viewMode !== 'screen') return;
         if (event.key === 'Escape') closePanel();
         if (event.key === 'Tab') {
-            const first = document.getElementById('close-panel');
-            const last = document.getElementById('panel-link');
-            if (event.shiftKey && (document.activeElement === first || document.activeElement?.id === 'project-panel')) {
+            const first = document.getElementById('panel-link');
+            const last = document.getElementById('close-panel');
+            if (!panel.contains(document.activeElement)) {
+                event.preventDefault();
+                (event.shiftKey ? last : first)?.focus();
+            } else if (event.shiftKey && (document.activeElement === first || document.activeElement?.id === 'project-panel')) {
                 event.preventDefault();
                 last?.focus();
             } else if (!event.shiftKey && document.activeElement === last) {
@@ -315,7 +402,7 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     // Keep the whole tabletop, including its radio, visible on portrait screens.
     const framingScale = Math.max(1, 0.95 / camera.aspect);
-    camera.position.sub(controls.target).multiplyScalar(framingScale / cameraFramingScale).add(controls.target);
+    if (viewMode === 'table') camera.position.sub(controls.target).multiplyScalar(framingScale / cameraFramingScale).add(controls.target);
     cameraFramingScale = framingScale;
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -340,10 +427,10 @@ function createCartridges() {
     const buildCartridge = createCartridgeFactory(renderer);
     // Spread the collection by hand: every label is visible, with room to play.
     const positions = [
-        [-4.05, 0.15, -0.16], [-1.9, -2.3, 0.12], [0, -2.3, -0.08],
-        [1.9, -2.15, 0.18], [3.75, -0.8, -0.18], [-4.05, 2.1, 0.14],
-        [-2.15, 0.1, 0.1], [-0.25, 0.1, -0.12], [1.65, 0.05, 0.12],
-        [-1.75, 2.1, -0.14], [1.1, 2.1, 0.18],
+        [-4.1, -0.45, -0.16], [1.65, 0, 0.12],
+        [-4.1, 1.25, -0.08], [-2.15, 1.25, 0.18], [-0.3, 1.4, -0.12], [4.3, 0, 0.14],
+        [-4.1, 2.9, 0.1], [-2.15, 2.9, -0.12], [-0.25, 3, 0.12],
+        [1.7, 2.9, -0.14], [3.8, 2.8, 0.18],
     ];
     projects.forEach((project, index) => {
         const cartridge = buildCartridge(project, index);
@@ -371,7 +458,7 @@ function getCartridgePosition() {
     do {
         x = (Math.random() - 0.5) * 8;
         z = (Math.random() - 0.5) * 6;
-    } while (x < -1.6 && z < -0.3);
+    } while (z < 1.5);
     return { x, z };
 }
 
@@ -379,7 +466,7 @@ function pointerHit(event: PointerEvent) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
-    return raycaster.intersectObjects([...cartridges, radio.object], true)[0];
+    return raycaster.intersectObjects([...cartridges, radio.object, consoleStation.object], true)[0];
 }
 
 function onPointerDown(event: PointerEvent) {
@@ -388,6 +475,9 @@ function onPointerDown(event: PointerEvent) {
 
     const hit = pointerHit(event);
     if (!hit) return;
+    let movable: THREE.Object3D | null = hit.object;
+    while (movable && !movable.userData.physicsBody) movable = movable.parent;
+    if (!movable) return;
     if (event.pointerType === 'touch') event.preventDefault();
     mouseDownPosition.set(event.clientX, event.clientY);
     isDragging = false;
@@ -404,6 +494,8 @@ function onPointerDown(event: PointerEvent) {
         selectedObject = selectedObject.parent;
     }
     selectedObject.userData.originalY = selectedObject.position.y;
+    selectedObject.userData.pickupPosition = selectedObject.position.clone();
+    selectedObject.userData.pickupRotation = selectedObject.quaternion.clone();
     targetRotation.setFromEuler(new THREE.Euler(selectedObject === radio.object ? 0 : -Math.PI / 2, 0, 0));
     targetLiftHeight = 0;
     dragVelocity.set(0, 0, 0);
@@ -436,7 +528,10 @@ function releasePointer(pointerId: number, throwObject: boolean) {
     pressedPowerButton = false;
     activePointerId = null;
     activePointerType = '';
-    controls.enabled = true;
+    controls.enabled = viewMode === 'table';
+    consoleStation.setSlotGlow(false);
+    slotReady = false;
+    slotHint.hidden = true;
     renderer.domElement.style.cursor = '';
     isDragging = false;
     if (renderer.domElement.hasPointerCapture(pointerId)) renderer.domElement.releasePointerCapture(pointerId);
@@ -448,11 +543,12 @@ function onPointerUp(event: PointerEvent) {
     const clickThreshold = activePointerType === 'touch' ? 24 : 5;
     const hit = pointerHit(event);
     const shouldToggle = pressedPowerButton && !isDragging && distance < clickThreshold && !!hit && radio.isPowerButton(hit.object);
-    const project = selectedObject?.userData.project;
-    const shouldOpenProject = project && !isDragging && distance < clickThreshold;
-    releasePointer(event.pointerId, true);
+    const cartridge = selectedObject?.userData.project ? selectedObject : null;
+    const slotPoint = raycaster.ray.intersectPlane(consoleStation.slotPlane, new THREE.Vector3());
+    const shouldInsert = cartridge && ((!isDragging && distance < clickThreshold) || (isDragging && slotPoint && consoleStation.isNearSlot(slotPoint)));
+    releasePointer(event.pointerId, !shouldInsert);
     if (shouldToggle) radio.toggle();
-    if (shouldOpenProject) showProjectPanel(project);
+    if (shouldInsert && cartridge) insertCartridge(cartridge);
 }
 
 function onPointerCancel(event: PointerEvent) {
@@ -463,7 +559,9 @@ function onPointerMove(event: PointerEvent) {
     if (isPanelOpen()) return;
     if (activePointerId === null && event.target === renderer.domElement) {
         const hit = pointerHit(event);
-        renderer.domElement.style.cursor = hit ? radio.isPowerButton(hit.object) ? 'pointer' : 'grab' : '';
+        let movable: THREE.Object3D | null = hit?.object ?? null;
+        while (movable && !movable.userData.physicsBody) movable = movable.parent;
+        renderer.domElement.style.cursor = movable ? radio.isPowerButton(hit!.object) ? 'pointer' : 'grab' : '';
         return;
     }
     if (activePointerId !== event.pointerId) return;
@@ -484,12 +582,18 @@ function onPointerMove(event: PointerEvent) {
     velocity.clampLength(0, 12);
     dragVelocity.lerp(velocity, 0.65);
     lastDragTime = now;
-    selectedObject.position.x = point.x;
-    selectedObject.position.z = point.z;
+    const slotPoint = raycaster.ray.intersectPlane(consoleStation.slotPlane, new THREE.Vector3());
+    slotReady = !!selectedObject.userData.project && !!slotPoint && consoleStation.isNearSlot(slotPoint);
+    consoleStation.setSlotGlow(!!selectedObject.userData.project, slotReady);
+    slotHint.hidden = !slotReady;
+    targetRotation.copy(slotReady ? uprightRotation : new THREE.Quaternion().setFromEuler(new THREE.Euler(selectedObject === radio.object ? 0 : -Math.PI / 2, 0, 0)));
+    targetLiftHeight = slotReady ? consoleStation.slotPosition.y + 1.25 - selectedObject.userData.originalY : 2;
+    selectedObject.position.x = slotReady ? consoleStation.slotPosition.x : point.x;
+    selectedObject.position.z = slotReady ? consoleStation.slotPosition.z : point.z;
     // Keep the physics body current even if pointerup precedes the next frame.
     const body = selectedObject.userData.physicsBody as CANNON.Body;
-    body.position.x = point.x;
-    body.position.z = point.z;
+    body.position.x = selectedObject.position.x;
+    body.position.z = selectedObject.position.z;
     body.aabbNeedsUpdate = true;
 }
 
@@ -521,7 +625,7 @@ function animate() {
     
     // Sync Three.js meshes with physics bodies
     cartridges.forEach(cartridge => {
-        if (cartridge.userData.physicsBody && cartridge !== selectedObject) {
+        if (cartridge.userData.physicsBody && cartridge !== selectedObject && cartridge !== loadedCartridge) {
             cartridge.position.copy(cartridge.userData.physicsBody.position);
             cartridge.quaternion.copy(cartridge.userData.physicsBody.quaternion);
             
@@ -539,7 +643,8 @@ function animate() {
     });
     
     radio.update();
-    controls.update();
+    if (viewMode === 'table' && controls.enabled) controls.update();
+    updateConsoleView(now);
     renderer.render(scene, camera);
 }
 
@@ -612,183 +717,76 @@ init();
       .scene-hint { top: 5.4rem; left: 1rem; right: auto; bottom: auto; max-width: calc(100% - 3.5rem); text-align: left; }
     }
 
-        &.panel-open {
-            #canvas-container {
-                pointer-events: none;
-            }
-        }
+    &.screen-open {
+      .scene-intro, .scene-hint, :global(.radio-controls) { visibility: hidden; }
+      #canvas-container { pointer-events: none; }
+    }
+
+    #slot-hint {
+      position: fixed;
+      bottom: 6.8rem;
+      left: 50%;
+      transform: translateX(-50%);
+      margin: 0;
+      padding: 0.65rem 1rem;
+      border: 1px solid #8ef0cb;
+      border-radius: 5px;
+      background: #1c3532;
+      color: #b7ffe2;
+      font: 0.85rem 'Trebuchet MS', sans-serif;
+      pointer-events: none;
+      white-space: nowrap;
+    }
 
     #project-panel {
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      box-sizing: border-box;
-      grid-template-columns: 0.95fr 1.05fr;
-      width: min(740px, calc(100vw - 2rem));
-      max-height: calc(100dvh - 2rem);
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      background: #fbfaf4;
-      border: 1px solid #ffffffb3;
-      border-radius: 14px;
-      z-index: 1000;
-      box-shadow: 0 28px 90px #102c2359, 0 4px 16px #102c2326;
-      text-align: left;
+      inset: 0;
+      z-index: 200;
+      pointer-events: none;
       outline: none;
-      animation: panel-enter 180ms ease-out both;
+
+      &[hidden] { display: none; }
+
+      #panel-link {
+        position: absolute;
+        display: block;
+        border-radius: 3px;
+        pointer-events: auto;
+        cursor: pointer;
+        &:hover { background: #a1f3d318; }
+        &:focus-visible { outline: 3px solid #b7ffe2; outline-offset: 3px; }
+      }
 
       #close-panel {
         position: absolute;
-        top: 0.85rem;
-        right: 0.85rem;
-        display: grid;
-        place-items: center;
-        width: 40px;
-        height: 40px;
-        padding: 0;
-        background: #fbfaf4e6;
-        border: 1px solid #dce2d6;
-        border-radius: 50%;
-        color: #475e51;
-        cursor: pointer;
-        transition: background 150ms, color 150ms;
-
-        &:hover { background: #e3e9dd; color: #203e30; }
-      }
-
-      .panel-artwork {
-        display: grid;
-        place-items: center;
-        min-width: 0;
-        min-height: 340px;
-        padding: 2rem;
-        background: #e2e8da;
-        border-right: 1px solid #d5dece;
-      }
-
-      #panel-image {
-        display: block;
-        width: 100%;
-        height: 260px;
-        object-fit: contain;
-        border-radius: 3px;
-        filter: drop-shadow(0 6px 10px #243c291a);
-      }
-
-      .panel-content {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        gap: 2rem;
-        min-width: 0;
-        padding: 3.5rem 2rem 2rem;
-      }
-
-      h2 {
-        margin: 0;
-        color: #263b37;
-        font-family: 'Trebuchet MS', sans-serif;
-        font-size: clamp(1.5rem, 2.8vw, 2rem);
-        font-weight: 700;
-        line-height: 1.16;
-        letter-spacing: -0.035em;
-        overflow-wrap: anywhere;
-        text-wrap: balance;
-      }
-
-      #panel-body {
-        color: #526055;
-        font-size: 0.95rem;
-        line-height: 1.65;
-        margin: 1rem 0 0;
-      }
-
-      .panel-action { display: grid; justify-items: start; gap: 0.65rem; }
-
-      #panel-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        min-height: 46px;
-        box-sizing: border-box;
-        padding: 0.75rem 1.1rem;
-        border-radius: 5px;
-        background: #2d5543;
-        color: #fbfaf4;
-        text-decoration: none;
-        font-size: 0.9rem;
-        font-weight: 650;
-        transition: background 150ms;
-
-        &:hover { background: #203e30; }
-      }
-
-      #panel-destination {
-        color: #677567;
-        font-size: 0.75rem;
-        overflow-wrap: anywhere;
-      }
-
-      .visually-hidden {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        overflow: hidden;
-        clip-path: inset(50%);
+        bottom: max(1.5rem, env(safe-area-inset-bottom));
+        left: 50%;
+        transform: translateX(-50%);
+        min-height: 48px;
+        max-width: calc(100vw - 2rem);
+        padding: 0.8rem 1.4rem;
+        border: 2px solid #c9c8b9;
+        border-radius: 6px;
+        background: #393e40;
+        color: #f0f0e2;
+        box-shadow: 0 4px 0 #1c2427;
+        font: 600 0.95rem 'Trebuchet MS', sans-serif;
         white-space: nowrap;
-      }
-
-      button:focus-visible, a:focus-visible { outline: 3px solid #60856b; outline-offset: 4px; }
-
-      @media (max-width: 600px) {
-        grid-template-columns: 1fr;
-        width: min(420px, calc(100vw - 1.5rem));
-        max-height: calc(100dvh - 1.5rem);
-
-        .panel-artwork {
-          min-height: 0;
-          padding: 1.5rem 3rem;
-          border-right: 0;
-          border-bottom: 1px solid #d5dece;
-        }
-
-        #panel-image { height: clamp(140px, 23dvh, 210px); }
-        .panel-content { padding: 1.5rem; gap: 1.5rem; }
-        #panel-link { width: 100%; }
-        .panel-action { justify-items: stretch; }
-        #panel-destination { text-align: center; }
+        cursor: pointer;
+        pointer-events: auto;
+        &:hover { background: #4b5554; }
+        &:focus-visible { outline: 3px solid #8ef0cb; outline-offset: 4px; }
       }
     }
 
-    #project-overlay {
-      position: fixed;
-      inset: 0;
-      background: #142d2366;
-      backdrop-filter: blur(5px);
-      -webkit-backdrop-filter: blur(5px);
-      z-index: 900;
-      pointer-events: auto;
-      animation: overlay-enter 180ms ease-out both;
-    }
-
-    @keyframes panel-enter {
-      from { opacity: 0; transform: translate(-50%, -48%) scale(0.985); }
-      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    }
-
-    @keyframes overlay-enter {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      #project-panel, #project-overlay { animation: none; }
-      #project-panel {
-        #close-panel, #panel-link { transition: none; }
-      }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
     }
 
     h1 {

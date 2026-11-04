@@ -136,6 +136,7 @@ import VirtualBookingTexture from '../assets/virtualbooking.png';
 import UberhackerTexture from '../assets/uberhacker.png';
 import MumalabTexture from '../assets/mumalab-logo.png';
 import MakertalkTexture from '../assets/makertalk.svg';
+import DxfDecomposerTexture from '../assets/dxf-decomposer.svg';
 import Lunchtime from '../assets/Lunchtime_logo.png';
 
 let scene: THREE.Scene;
@@ -411,26 +412,27 @@ function onWindowResize() {
 
 function createCartridges() {
     const projects = [
-        { image: Lunchtime.src, title: 'Lunchtime', body: 'A tool to split your lunch bill with friends', href: 'https://lunchtime.simmarith.de/', special: true },
+        { image: Lunchtime.src, title: 'Lunchtime', body: 'A tool to split your lunch bill with friends', href: 'https://lunchtime.lakebed.app/', special: true },
         { image: VimClutchTexture.src, title: 'Vim Clutch', body: 'Using a foot pedal to switch in/out of insert mode in vim', href: 'https://github.com/munichmakerlab/vim-clutch' },
         { image: CableHolderTexture.src, title: 'Prusa Mini Cable Holder', body: 'A quick fix for a quick issue', href: 'https://www.printables.com/model/289090-prusa-mini-usb-cable-holder' },
         { image: KeyboardTexture.src, title: 'Handsoldered Dactyl-Manuform', body: "I've built my own keyboard off of templates from the internet.", href: 'https://wiki.munichmakerlab.de/wiki/Dactyl-Manuform' },
-        { image: NumGridTexture.src, title: 'NumGrid', body: "I've built a small puzzle game on a quiet weekend.", href: '/numgrid' },
+        { image: NumGridTexture.src, title: 'NumGrid', body: "I've built a small puzzle game on a quiet weekend.", href: 'https://simmarith.itch.io/numgrid'},
         { image: NeocitiesTexture.src, title: 'Neocities', body: 'My Pixelart, cozy page on Neocities', href: 'https://simmarith.neocities.org/', special: true },
-        { image: AeropressTexture.src, title: 'Aeropress Filter Travel Box', body: 'The ultimate companion to keep all your filters on the go!', href: '/aeropress_filter' },
+        { image: AeropressTexture.src, title: 'Aeropress Filter Travel Box', body: 'The ultimate companion to keep all your filters on the go!', href: 'https://www.printables.com/model/321945-aeropress-filter-travel-box' },
         { image: VirtualBookingTexture.src, title: 'VirtualBooking.com', body: 'Booking a vacation in VR', href: 'https://github.com/mumahack/virtualBookingCom' },
         { image: UberhackerTexture.src, title: 'Uberhacker', body: 'A multiplayer hacking game with IT related minigames', href: 'https://uberhacker.simmarith.de' },
-        { image: MumalabTexture.src, title: 'Munich Maker Lab Website', body: 'A rewrite of the Munich Maker Lab Website using Astro', href: '/mumalab', special: true },
-        { image: MakertalkTexture.src, title: 'MakerTalk', body: 'A modern, open-source team chat application designed to remain free and accessible forever', href: 'https://github.com/Simmarith/makertalk', special: true }
+        { image: MumalabTexture.src, title: 'Munich Maker Lab Website', body: 'A rewrite of the Munich Maker Lab Website using Astro', href: 'https://munichmakerlab.de', special: true },
+        { image: MakertalkTexture.src, title: 'MakerTalk', body: 'A modern, open-source team chat application designed to remain free and accessible forever', href: 'https://github.com/Simmarith/makertalk', special: true },
+        { image: DxfDecomposerTexture.src, title: 'DXF Decomposer', body: 'A FreeCAD plugin to turn designs into laser-cuttable panels', href: 'https://tangled.org/simmarith.pds.simmarith.de/dxf-decomposer', special: true }
     ];
 
     const buildCartridge = createCartridgeFactory(renderer);
     // Spread the collection by hand: every label is visible, with room to play.
     const positions = [
-        [-4.1, -0.45, -0.16], [1.65, 0, 0.12],
+        [-4.1, -0.45, -0.16], [1.65, -0.3, 0.12],
         [-4.1, 1.25, -0.08], [-2.15, 1.25, 0.18], [-0.3, 1.4, -0.12], [4.3, 0, 0.14],
         [-4.1, 2.9, 0.1], [-2.15, 2.9, -0.12], [-0.25, 3, 0.12],
-        [1.7, 2.9, -0.14], [3.8, 2.8, 0.18],
+        [1.7, 3.15, -0.06], [3.8, 2.8, 0.18], [1.7, 1.45, 0.08],
     ];
     projects.forEach((project, index) => {
         const cartridge = buildCartridge(project, index);

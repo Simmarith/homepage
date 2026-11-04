@@ -18,15 +18,42 @@ import GitHub from '../assets/github.svg'
 <Layout title="Adrian's Stuff.">
   <main>
     <div id="canvas-container"></div>
+    <header class="scene-intro">
+      <h1>Adrian's stuff.</h1>
+      <p>Small builds, side projects, and experiments.</p>
+    </header>
+    <p class="scene-hint">
+      <span class="mouse-hint">Pick a cartridge to explore. Drag to move; scroll to zoom.</span>
+      <span class="touch-hint">Tap a cartridge to explore. Drag to move; pinch to zoom.</span>
+    </p>
     <Radio />
     
-        <!-- Project Info Panel -->
-        <div id="project-overlay" style="display: none;"></div>
-        <div id="project-panel" style="display: none;">
-      <button id="close-panel">✕</button>
-      <h2 id="panel-title"></h2>
-      <p id="panel-body"></p>
-      <a id="panel-link" href="#" target="_blank" rel="noopener">View Project →</a>
+    <div id="project-overlay" style="display: none;"></div>
+    <div id="project-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" aria-describedby="panel-body" tabindex="-1" style="display: none;">
+      <button id="close-panel" type="button" aria-label="Close project">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <path d="m6 6 12 12M18 6 6 18" />
+        </svg>
+      </button>
+      <div class="panel-artwork">
+        <img id="panel-image" alt="" decoding="async" />
+      </div>
+      <div class="panel-content">
+        <div>
+          <h2 id="panel-title"></h2>
+          <p id="panel-body"></p>
+        </div>
+        <div class="panel-action">
+          <a id="panel-link" href="#" target="_blank" rel="noopener">
+            View project
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 3h7v7M21 3l-9 9M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5" />
+            </svg>
+            <span class="visually-hidden">(opens in a new tab)</span>
+          </a>
+          <span id="panel-destination"></span>
+        </div>
+      </div>
     </div>
     
     <div class="old-cards" style="display: none;">
@@ -88,7 +115,7 @@ import GitHub from '../assets/github.svg'
       />
       <Card
         img={Uberhacker}
-        href="/uberhacker"
+        href="https://uberhacker.simmarith.de"
         title="Uberhacker"
         body="A multiplayer hacking game with IT related minigames"
         top={10}
@@ -112,9 +139,10 @@ import GitHub from '../assets/github.svg'
 <script>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import * as CANNON from 'cannon-es';
 import { createRadio } from '../assets/Radio';
+import { createRoom, TABLE_TOP, FLOOR_HEIGHT } from '../assets/Room';
+import { createCartridgeFactory, CARTRIDGE_HALF_EXTENTS, type CartridgeProject } from '../assets/Cartridge';
 import VimClutchTexture from '../assets/vim-clutch.jpg';
 import CableHolderTexture from '../assets/cable-holder.webp';
 import KeyboardTexture from '../assets/keyboard.jpeg';
@@ -132,7 +160,7 @@ let camera: THREE.PerspectiveCamera;
 let renderer: THREE.WebGLRenderer;
 let controls: OrbitControls;
 let world: CANNON.World;
-let cartridges: THREE.Mesh[] = [];
+let cartridges: THREE.Group[] = [];
 let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
 let selectedObject: THREE.Object3D | null = null;
@@ -147,21 +175,32 @@ let pressedPowerButton = false;
 let dragVelocity = new THREE.Vector3();
 let lastDragTime = 0;
 let cameraFramingScale = 1;
+let lastFrameTime = performance.now();
 
-function showProjectPanel(project: any) {
+function showProjectPanel(project: CartridgeProject) {
     const panel = document.getElementById('project-panel');
     const overlay = document.getElementById('project-overlay');
     const main = document.querySelector('main');
     const title = document.getElementById('panel-title');
     const body = document.getElementById('panel-body');
     const link = document.getElementById('panel-link') as HTMLAnchorElement;
+    const image = document.getElementById('panel-image') as HTMLImageElement;
+    const destination = document.getElementById('panel-destination');
     
     if (panel && overlay && title && body && link) {
         title.textContent = project.title;
         body.textContent = project.body;
         link.href = project.href;
-        panel.style.display = 'block';
+        image.src = project.image;
+        image.alt = `Artwork for ${project.title}`;
+        if (destination) {
+            destination.textContent = project.href.startsWith('/')
+                ? 'More about this project'
+                : new URL(project.href).hostname.replace(/^www\./, '');
+        }
+        panel.style.display = 'grid';
         overlay.style.display = 'block';
+        panel.focus();
         if (main) {
             main.classList.add('panel-open');
         }
@@ -181,6 +220,7 @@ function closePanel() {
     if (main) {
         main.classList.remove('panel-open');
     }
+    if (renderer) renderer.domElement.focus({ preventScroll: true });
 }
 
 function isPanelOpen() {
@@ -193,28 +233,47 @@ function init() {
     if (!container) return;
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
+    scene.background = new THREE.Color(0xd3dcd5);
     
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera = new THREE.PerspectiveCamera(43, window.innerWidth / window.innerHeight, 0.1, 100);
     renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
     renderer.domElement.style.touchAction = 'none';
+    renderer.domElement.tabIndex = 0;
+    renderer.domElement.setAttribute('aria-label', 'Interactive project table. Pick a cartridge to explore.');
     container.appendChild(renderer.domElement);
 
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    camera.position.set(0, 8, 2);
-    cameraFramingScale = Math.max(1, 1 / camera.aspect);
-    camera.position.multiplyScalar(cameraFramingScale);
-    camera.lookAt(0, -1, 0);
+    controls.enablePan = false;
+    controls.minPolarAngle = 0.18;
+    controls.maxPolarAngle = Math.PI / 2 - 0.1;
+    controls.minAzimuthAngle = -Math.PI / 2 + 0.15;
+    controls.maxAzimuthAngle = Math.PI / 2 - 0.15;
+    controls.minDistance = 7;
+    controls.maxDistance = 42;
+    controls.target.set(0, -2, 0);
+    camera.position.set(7.8, 9.5, 13.5);
+    cameraFramingScale = Math.max(1, 0.95 / camera.aspect);
+    camera.position.sub(controls.target).multiplyScalar(cameraFramingScale).add(controls.target);
+    camera.lookAt(controls.target);
 
     // Setup physics world
     world = new CANNON.World();
-    world.gravity.set(0, -4, 0);
+    world.gravity.set(0, -9.82, 0);
     world.broadphase = new CANNON.NaiveBroadphase();
+    world.allowSleep = true;
+    world.defaultContactMaterial.friction = 0.55;
+    world.defaultContactMaterial.restitution = 0.12;
 
-    createTable();
+    createRoom(scene, world, renderer);
     radio = createRadio(scene, world);
     createCartridges();
     animate();
@@ -235,63 +294,35 @@ function init() {
     if (overlay) {
         overlay.addEventListener('click', closePanel);
     }
+    window.addEventListener('keydown', event => {
+        if (!isPanelOpen()) return;
+        if (event.key === 'Escape') closePanel();
+        if (event.key === 'Tab') {
+            const first = document.getElementById('close-panel');
+            const last = document.getElementById('panel-link');
+            if (event.shiftKey && (document.activeElement === first || document.activeElement?.id === 'project-panel')) {
+                event.preventDefault();
+                last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+            }
+        }
+    });
 }
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     // Keep the whole tabletop, including its radio, visible on portrait screens.
-    const framingScale = Math.max(1, 1 / camera.aspect);
+    const framingScale = Math.max(1, 0.95 / camera.aspect);
     camera.position.sub(controls.target).multiplyScalar(framingScale / cameraFramingScale).add(controls.target);
     cameraFramingScale = framingScale;
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function createTable() {
-    // Visual table with wood texture
-    const textureLoader = new THREE.TextureLoader();
-    const woodTexture = textureLoader.load('/wood.png');
-    
-    const tableGeometry = new THREE.BoxGeometry(12, 0.3, 8);
-    const tableMaterial = new THREE.MeshStandardMaterial({ 
-        map: woodTexture,
-        roughness: 0.8 
-    });
-    const table = new THREE.Mesh(tableGeometry, tableMaterial);
-    table.position.y = -2;
-    scene.add(table);
-
-    // Physics table (static)
-    const tableShape = new CANNON.Box(new CANNON.Vec3(6, 0.15, 4));
-    const tableBody = new CANNON.Body({ mass: 0 }); // mass 0 = static
-    tableBody.addShape(tableShape);
-    tableBody.position.set(0, -2, 0);
-    world.addBody(tableBody);
-
-    // Add lighting so we can see the table better
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-    scene.add(ambientLight);
-    
-    // Main directional light from above
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    directionalLight.position.set(0, 10, 0);
-    scene.add(directionalLight);
-    
-    // Fill lights from sides for better illumination
-    const fillLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
-    fillLight1.position.set(10, 5, 5);
-    scene.add(fillLight1);
-    
-    const fillLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
-    fillLight2.position.set(-10, 5, -5);
-    scene.add(fillLight2);
-}
-
 function createCartridges() {
-    const textureLoader = new THREE.TextureLoader();
-    const stlLoader = new STLLoader();
-    
-    // Project data with images and info
     const projects = [
         { image: Lunchtime.src, title: 'Lunchtime', body: 'A tool to split your lunch bill with friends', href: 'https://lunchtime.simmarith.de/', special: true },
         { image: VimClutchTexture.src, title: 'Vim Clutch', body: 'Using a foot pedal to switch in/out of insert mode in vim', href: 'https://github.com/munichmakerlab/vim-clutch' },
@@ -301,218 +332,35 @@ function createCartridges() {
         { image: NeocitiesTexture.src, title: 'Neocities', body: 'My Pixelart, cozy page on Neocities', href: 'https://simmarith.neocities.org/', special: true },
         { image: AeropressTexture.src, title: 'Aeropress Filter Travel Box', body: 'The ultimate companion to keep all your filters on the go!', href: '/aeropress_filter' },
         { image: VirtualBookingTexture.src, title: 'VirtualBooking.com', body: 'Booking a vacation in VR', href: 'https://github.com/mumahack/virtualBookingCom' },
-        { image: UberhackerTexture.src, title: 'Uberhacker', body: 'A multiplayer hacking game with IT related minigames', href: '/uberhacker' },
+        { image: UberhackerTexture.src, title: 'Uberhacker', body: 'A multiplayer hacking game with IT related minigames', href: 'https://uberhacker.simmarith.de' },
         { image: MumalabTexture.src, title: 'Munich Maker Lab Website', body: 'A rewrite of the Munich Maker Lab Website using Astro', href: '/mumalab', special: true },
         { image: MakertalkTexture.src, title: 'MakerTalk', body: 'A modern, open-source team chat application designed to remain free and accessible forever', href: 'https://github.com/Simmarith/makertalk', special: true }
     ];
 
-    // Load STL once and reuse
-    stlLoader.load('/NES_Cartridge.stl', (stlGeometry) => {
-        stlGeometry.computeVertexNormals();
-        stlGeometry.center();
-        stlGeometry.scale(0.01, 0.01, 0.01);
-        
-        projects.forEach((project, i) => {
-            // Load texture
-            const texture = textureLoader.load(project.image);
-            texture.flipY = false;
-            // Don't repeat the texture - we want it to display once
-            texture.wrapS = THREE.ClampToEdgeWrapping;
-            texture.wrapT = THREE.ClampToEdgeWrapping;
-            
-            // Clone the geometry for this cartridge
-            const geometry = stlGeometry.clone();
-            
-            // Create groups for material assignment based on face normals
-            const positionAttribute = geometry.getAttribute('position');
-            const normalAttribute = geometry.getAttribute('normal');
-            
-            const faceCount = positionAttribute.count / 3;
-            let labelCount = 0;
-            let otherCount = 0;
-            
-            // Find bounding box of all upward-facing faces first
-            let minX = Infinity, maxX = -Infinity;
-            let minY = Infinity, maxY = -Infinity;
-            
-            // First pass: find bounds of upward-facing surface
-            for (let i = 0; i < faceCount; i++) {
-                const nz = normalAttribute.getZ(i * 3);
-                if (nz > 0.7) {
-                    for (let j = 0; j < 3; j++) {
-                        const idx = i * 3 + j;
-                        const x = positionAttribute.getX(idx);
-                        const y = positionAttribute.getY(idx);
-                        minX = Math.min(minX, x);
-                        maxX = Math.max(maxX, x);
-                        minY = Math.min(minY, y);
-                        maxY = Math.max(maxY, y);
-                    }
-                }
-            }
-            
-            // Define center label area (80% of the width and height)
-            const centerX = (minX + maxX) / 2;
-            const centerY = (minY + maxY) / 2;
-            const labelWidthHalf = (maxX - minX) * 0.4; // 80% total width
-            const labelHeightHalf = (maxY - minY) * 0.4; // 80% total height
-            
-            // Second pass: count faces in label area vs other
-            for (let i = 0; i < faceCount; i++) {
-                const nz = normalAttribute.getZ(i * 3);
-                if (nz > 0.7) {
-                    // Check if this face is in the center label area
-                    let inLabelArea = true;
-                    for (let j = 0; j < 3; j++) {
-                        const idx = i * 3 + j;
-                        const x = positionAttribute.getX(idx);
-                        const y = positionAttribute.getY(idx);
-                        if (Math.abs(x - centerX) > labelWidthHalf || 
-                            Math.abs(y - centerY) > labelHeightHalf) {
-                            inLabelArea = false;
-                            break;
-                        }
-                    }
-                    if (inLabelArea) {
-                        labelCount += 3;
-                    } else {
-                        otherCount += 3;
-                    }
-                } else {
-                    otherCount += 3;
-                }
-            }
-            
-            // Generate UV coordinates
-            const uvs = new Float32Array(positionAttribute.count * 2);
-            const rangeX = labelWidthHalf * 2;
-            const rangeY = labelHeightHalf * 2;
-            
-            for (let i = 0; i < faceCount; i++) {
-                const nz = normalAttribute.getZ(i * 3);
-                
-                // Check if all vertices of this face are in the label area
-                let inLabelArea = nz > 0.7;
-                if (inLabelArea) {
-                    for (let j = 0; j < 3; j++) {
-                        const idx = i * 3 + j;
-                        const x = positionAttribute.getX(idx);
-                        const y = positionAttribute.getY(idx);
-                        if (Math.abs(x - centerX) > labelWidthHalf || 
-                            Math.abs(y - centerY) > labelHeightHalf) {
-                            inLabelArea = false;
-                            break;
-                        }
-                    }
-                }
-                
-                for (let j = 0; j < 3; j++) {
-                    const idx = i * 3 + j;
-                    if (inLabelArea) {
-                        // Map label area positions to UV coordinates (0-1 range)
-                        const x = positionAttribute.getX(idx);
-                        const y = positionAttribute.getY(idx);
-                        uvs[idx * 2] = (x - (centerX - labelWidthHalf)) / rangeX;
-                        uvs[idx * 2 + 1] = 1 - (y - (centerY - labelHeightHalf)) / rangeY; // Flip V coordinate
-                    } else {
-                        // Other faces get default UVs
-                        uvs[idx * 2] = 0;
-                        uvs[idx * 2 + 1] = 0;
-                    }
-                }
-            }
-            
-            geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-            
-            // Third pass: reorganize indices so label faces come first
-            const indices = geometry.getIndex();
-            let newIndices: number[];
-            
-            if (indices) {
-                newIndices = Array.from(indices.array as Uint32Array | Uint16Array);
-            } else {
-                newIndices = Array.from({length: positionAttribute.count}, (_, i) => i);
-            }
-            
-            const labelIndices: number[] = [];
-            const otherIndices: number[] = [];
-            
-            for (let i = 0; i < faceCount; i++) {
-                const nz = normalAttribute.getZ(i * 3);
-                const faceIndices = [newIndices[i * 3], newIndices[i * 3 + 1], newIndices[i * 3 + 2]];
-                
-                // Check if this face is in label area
-                let inLabelArea = nz > 0.7;
-                if (inLabelArea) {
-                    for (let j = 0; j < 3; j++) {
-                        const idx = i * 3 + j;
-                        const x = positionAttribute.getX(idx);
-                        const y = positionAttribute.getY(idx);
-                        if (Math.abs(x - centerX) > labelWidthHalf || 
-                            Math.abs(y - centerY) > labelHeightHalf) {
-                            inLabelArea = false;
-                            break;
-                        }
-                    }
-                }
-                
-                if (inLabelArea) {
-                    labelIndices.push(...faceIndices);
-                } else {
-                    otherIndices.push(...faceIndices);
-                }
-            }
-            
-            const reorganizedIndices = [...labelIndices, ...otherIndices];
-            geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(reorganizedIndices), 1));
-            
-            // Create materials - label with texture, body uses gold metallic for special cartridges
-            const bodyMaterial = project.special 
-                ? new THREE.MeshStandardMaterial({ 
-                    color: 0xFFD700,    // Gold color
-                    roughness: 0.3,      // Lower roughness for metallic shine
-                    metalness: 0.9       // High metalness for metallic look
-                })
-                : new THREE.MeshStandardMaterial({ 
-                    color: 0xaaaaaa,
-                    roughness: 0.6,
-                    metalness: 0
-                });
-            
-            const materials = [
-                new THREE.MeshStandardMaterial({ map: texture }),
-                bodyMaterial
-            ];
-            
-            // Add groups for material assignment
-            geometry.clearGroups();
-            geometry.addGroup(0, labelCount, 0); // Label faces use material 0 (textured)
-            geometry.addGroup(labelCount, otherCount, 1); // Other faces use material 1 (dark)
-            
-            const cartridge = new THREE.Mesh(geometry, materials);
-            
-            const position = getCartridgePosition();
-            cartridge.position.set(position.x, 0.2 + i * 0.3, position.z);
-            // Rotate to lay flat on the table
-            cartridge.rotateX(Math.PI / 2);
-            cartridge.rotateZ(Math.PI);
-            cartridge.userData = { project };
-            scene.add(cartridge);
-            
-            // Physics body - simple box that matches cartridge dimensions
-            const shape = new CANNON.Box(new CANNON.Vec3(0.6, 0.7, 0.1));
-            const body = new CANNON.Body({ mass: 1 });
-            body.addShape(shape);
-            body.position.set(cartridge.position.x, cartridge.position.y, cartridge.position.z);
-            // Match the visual rotation
-            body.quaternion.setFromEuler(Math.PI * 1.5, 0, 0);
-            body.linearDamping = 0.5;
-            body.angularDamping = 0.7;
-            world.addBody(body);
-            
-            cartridge.userData.physicsBody = body;
-            cartridges.push(cartridge);
-        });
+    const buildCartridge = createCartridgeFactory(renderer);
+    // Spread the collection by hand: every label is visible, with room to play.
+    const positions = [
+        [-4.05, 0.15, -0.16], [-1.9, -2.3, 0.12], [0, -2.3, -0.08],
+        [1.9, -2.15, 0.18], [3.75, -0.8, -0.18], [-4.05, 2.1, 0.14],
+        [-2.15, 0.1, 0.1], [-0.25, 0.1, -0.12], [1.65, 0.05, 0.12],
+        [-1.75, 2.1, -0.14], [1.1, 2.1, 0.18],
+    ];
+    projects.forEach((project, index) => {
+        const cartridge = buildCartridge(project, index);
+        const [x, z, angle] = positions[index];
+        cartridge.position.set(x, TABLE_TOP + 0.19, z);
+        cartridge.rotation.set(-Math.PI / 2, 0, angle);
+        scene.add(cartridge);
+
+        const body = new CANNON.Body({ mass: 0.35 });
+        body.addShape(new CANNON.Box(CARTRIDGE_HALF_EXTENTS.clone()));
+        body.position.set(cartridge.position.x, cartridge.position.y, cartridge.position.z);
+        body.quaternion.set(cartridge.quaternion.x, cartridge.quaternion.y, cartridge.quaternion.z, cartridge.quaternion.w);
+        body.linearDamping = 0.35;
+        body.angularDamping = 0.65;
+        cartridge.userData.physicsBody = body;
+        world.addBody(body);
+        cartridges.push(cartridge);
     });
 }
 
@@ -556,7 +404,7 @@ function onPointerDown(event: PointerEvent) {
         selectedObject = selectedObject.parent;
     }
     selectedObject.userData.originalY = selectedObject.position.y;
-    targetRotation.setFromEuler(new THREE.Euler(selectedObject === radio.object ? -Math.PI / 2 + 0.22 : -Math.PI / 2, 0, 0));
+    targetRotation.setFromEuler(new THREE.Euler(selectedObject === radio.object ? 0 : -Math.PI / 2, 0, 0));
     targetLiftHeight = 0;
     dragVelocity.set(0, 0, 0);
     lastDragTime = performance.now();
@@ -649,7 +497,9 @@ function animate() {
     requestAnimationFrame(animate);
     
     // Update physics
-    world.step(1 / 60);
+    const now = performance.now();
+    world.step(1 / 60, Math.min((now - lastFrameTime) / 1000, 0.1), 6);
+    lastFrameTime = now;
     
     // Smooth transitions for selected cartridge
     if (selectedObject && selectedObject.userData.originalY !== undefined) {
@@ -676,7 +526,7 @@ function animate() {
             cartridge.quaternion.copy(cartridge.userData.physicsBody.quaternion);
             
             // If cartridge falls too low, reset it on the table
-            if (cartridge.position.y < -30) {
+            if (cartridge.position.y < FLOOR_HEIGHT + 0.3) {
                 const position = getCartridgePosition();
                 cartridge.position.set(position.x, 1, position.z);
                 cartridge.rotation.set(-Math.PI / 2, 0, 0);
@@ -717,6 +567,51 @@ init();
             touch-action: none;
     }
 
+    .scene-intro {
+      position: absolute;
+      top: max(1.5rem, env(safe-area-inset-top));
+      left: max(1.5rem, env(safe-area-inset-left));
+      text-align: left;
+      color: #263b37;
+      pointer-events: none;
+
+      h1 {
+        margin: 0;
+        opacity: 1;
+        font-family: 'Trebuchet MS', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      p { margin: 0.35rem 0 0; font-size: 0.8rem; }
+    }
+
+    .scene-hint {
+      position: absolute;
+      right: 1.5rem;
+      bottom: 1.25rem;
+      margin: 0;
+      padding: 0.65rem 0.85rem;
+      border-radius: 4px;
+      background: #edf0e6e6;
+      color: #344b41;
+      font-size: 0.75rem;
+      pointer-events: none;
+    }
+
+    .touch-hint { display: none; }
+
+    @media (pointer: coarse) {
+      .mouse-hint { display: none; }
+      .touch-hint { display: inline; }
+    }
+
+    @media (max-width: 600px) {
+      .scene-intro { top: max(1rem, env(safe-area-inset-top)); left: 1rem; }
+      .scene-hint { top: 5.4rem; left: 1rem; right: auto; bottom: auto; max-width: calc(100% - 3.5rem); text-align: left; }
+    }
+
         &.panel-open {
             #canvas-container {
                 pointer-events: none;
@@ -728,64 +623,173 @@ init();
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(20, 20, 20, 0.95);
-      backdrop-filter: blur(10px);
-      border: 2px solid rgba(124, 58, 237, 0.5);
-      border-radius: 12px;
-      padding: 2rem;
-      max-width: 500px;
-      width: 90%;
+      box-sizing: border-box;
+      grid-template-columns: 0.95fr 1.05fr;
+      width: min(740px, calc(100vw - 2rem));
+      max-height: calc(100dvh - 2rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      background: #fbfaf4;
+      border: 1px solid #ffffffb3;
+      border-radius: 14px;
       z-index: 1000;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 28px 90px #102c2359, 0 4px 16px #102c2326;
+      text-align: left;
+      outline: none;
+      animation: panel-enter 180ms ease-out both;
 
       #close-panel {
         position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background: none;
-        border: none;
-        color: #aaa;
-        font-size: 1.5rem;
+        top: 0.85rem;
+        right: 0.85rem;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        background: #fbfaf4e6;
+        border: 1px solid #dce2d6;
+        border-radius: 50%;
+        color: #475e51;
         cursor: pointer;
-        transition: color 0.2s;
+        transition: background 150ms, color 150ms;
 
-        &:hover {
-          color: #fff;
-        }
+        &:hover { background: #e3e9dd; color: #203e30; }
+      }
+
+      .panel-artwork {
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        min-height: 340px;
+        padding: 2rem;
+        background: #e2e8da;
+        border-right: 1px solid #d5dece;
+      }
+
+      #panel-image {
+        display: block;
+        width: 100%;
+        height: 260px;
+        object-fit: contain;
+        border-radius: 3px;
+        filter: drop-shadow(0 6px 10px #243c291a);
+      }
+
+      .panel-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 2rem;
+        min-width: 0;
+        padding: 3.5rem 2rem 2rem;
       }
 
       h2 {
-        margin: 0 0 1rem 0;
-        color: #fff;
-        font-size: 1.8rem;
+        margin: 0;
+        color: #263b37;
+        font-family: 'Trebuchet MS', sans-serif;
+        font-size: clamp(1.5rem, 2.8vw, 2rem);
+        font-weight: 700;
+        line-height: 1.16;
+        letter-spacing: -0.035em;
+        overflow-wrap: anywhere;
+        text-wrap: balance;
       }
 
-      p {
-        color: #ccc;
-        line-height: 1.6;
-        margin-bottom: 1.5rem;
+      #panel-body {
+        color: #526055;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        margin: 1rem 0 0;
       }
 
-      a {
-        display: inline-block;
-        color: rgb(124, 58, 237);
+      .panel-action { display: grid; justify-items: start; gap: 0.65rem; }
+
+      #panel-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        min-height: 46px;
+        box-sizing: border-box;
+        padding: 0.75rem 1.1rem;
+        border-radius: 5px;
+        background: #2d5543;
+        color: #fbfaf4;
         text-decoration: none;
-        font-weight: bold;
-        transition: color 0.2s;
+        font-size: 0.9rem;
+        font-weight: 650;
+        transition: background 150ms;
 
-        &:hover {
-          color: #da62c4;
+        &:hover { background: #203e30; }
+      }
+
+      #panel-destination {
+        color: #677567;
+        font-size: 0.75rem;
+        overflow-wrap: anywhere;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      button:focus-visible, a:focus-visible { outline: 3px solid #60856b; outline-offset: 4px; }
+
+      @media (max-width: 600px) {
+        grid-template-columns: 1fr;
+        width: min(420px, calc(100vw - 1.5rem));
+        max-height: calc(100dvh - 1.5rem);
+
+        .panel-artwork {
+          min-height: 0;
+          padding: 1.5rem 3rem;
+          border-right: 0;
+          border-bottom: 1px solid #d5dece;
         }
+
+        #panel-image { height: clamp(140px, 23dvh, 210px); }
+        .panel-content { padding: 1.5rem; gap: 1.5rem; }
+        #panel-link { width: 100%; }
+        .panel-action { justify-items: stretch; }
+        #panel-destination { text-align: center; }
       }
     }
 
-        #project-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            z-index: 900;
-            pointer-events: auto;
-        }
+    #project-overlay {
+      position: fixed;
+      inset: 0;
+      background: #142d2366;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 900;
+      pointer-events: auto;
+      animation: overlay-enter 180ms ease-out both;
+    }
+
+    @keyframes panel-enter {
+      from { opacity: 0; transform: translate(-50%, -48%) scale(0.985); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @keyframes overlay-enter {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #project-panel, #project-overlay { animation: none; }
+      #project-panel {
+        #close-panel, #panel-link { transition: none; }
+      }
+    }
 
     h1 {
       opacity: 0.2;

@@ -13,8 +13,8 @@ export function createRadio(scene: THREE.Scene, world: CANNON.World) {
   const sound = createRadioAudio(audio);
   const radio = new THREE.Group();
   radio.name = 'KellerFM radio';
-  radio.position.set(-3.7, -1.2, -2.1);
-  radio.rotation.x = -Math.PI / 2 + 0.22;
+  radio.position.set(-3.7, -0.96, -2.1);
+  radio.rotation.y = 0.12;
 
   const wood = new THREE.TextureLoader().load('/wood.png');
   wood.colorSpace = THREE.SRGBColorSpace;
@@ -87,11 +87,20 @@ export function createRadio(scene: THREE.Scene, world: CANNON.World) {
   led.position.set(0.94, -0.35, 0.57);
   radio.add(led);
   const powerButtons = new Set<THREE.Object3D>([powerKnob, powerMark, led]);
+  radio.traverse(object => {
+    if (object instanceof THREE.Mesh) {
+      object.castShadow = object !== display;
+      object.receiveShadow = true;
+    }
+  });
   scene.add(radio);
 
   // Give the receiver a solid body in the tabletop physics world.
   const body = new CANNON.Body({ mass: 2 });
   body.addShape(new CANNON.Box(new CANNON.Vec3(1.325, 0.725, 0.375)));
+  for (const x of [-0.85, 0.85]) {
+    body.addShape(new CANNON.Box(new CANNON.Vec3(0.16, 0.06, 0.275)), new CANNON.Vec3(x, -0.77, 0));
+  }
   body.position.set(radio.position.x, radio.position.y, radio.position.z);
   body.quaternion.set(radio.quaternion.x, radio.quaternion.y, radio.quaternion.z, radio.quaternion.w);
   body.linearDamping = 0.5;
@@ -174,9 +183,9 @@ export function createRadio(scene: THREE.Scene, world: CANNON.World) {
 
   function update() {
     // Match the cartridges' recovery after falling out of the scene.
-    if (body.position.y < -30) {
+    if (body.position.y < -6.2) {
       body.position.set(-3.7, 1, -2.1);
-      body.quaternion.setFromEuler(-Math.PI / 2 + 0.22, 0, 0);
+      body.quaternion.setFromEuler(0, 0.12, 0);
       body.velocity.setZero();
       body.angularVelocity.setZero();
       body.wakeUp();
